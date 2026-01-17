@@ -330,7 +330,7 @@ export const predictFoodPrice = (data: CityData, waterPrediction: WaterSupplyPre
   let reason = '';
   let supplyStatus = 'Normal supply levels';
   const affectedItems: string[] = [];
-  let timeline = 'Next 1-2 months';
+  const timeline = 'Next 1-2 months';
 
   // Low rainfall impact on agriculture
   if (isLowRainfall) {

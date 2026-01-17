@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Building2, Shield, LogOut, RefreshCw, LayoutDashboard, Activity } from 'lucide-react';
+import { Shield, LogOut, RefreshCw, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { useCityContext } from '@/contexts/CityContext';
 import { cn } from '@/lib/utils';
 
@@ -19,9 +20,12 @@ const Header = () => {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-lg group-hover:shadow-indigo-500/25 transition-all duration-300">
-            <Building2 className="h-5 w-5 text-white absolute" />
-            <Activity className="h-3 w-3 text-white absolute -top-1 -right-1" />
+          <div className="relative h-10 w-10 overflow-hidden rounded-2xl bg-card shadow-lg ring-1 ring-primary/20 transition-all duration-300 group-hover:shadow-primary/40">
+            <img
+              src="/city2.png"
+              alt="Urban Intel AI logo"
+              className="h-full w-full object-contain"
+            />
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">Urban Intel AI</h1>
@@ -64,20 +68,49 @@ const Header = () => {
               </Button>
             </>
           ) : (
-            <Link to="/admin">
-              <Button
-                size="sm"
-                className={cn(
-                  'gap-2 rounded-xl shadow-lg transition-all hover:shadow-xl',
-                  isAdmin
-                    ? 'bg-accent text-accent-foreground'
-                    : 'bg-primary text-primary-foreground'
-                )}
-              >
-                <Shield className="h-4 w-4" />
-                <span className="hidden sm:inline">Admin Portal</span>
-              </Button>
-            </Link>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent shadow-lg transition-all hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  aria-label="Open admin portal"
+                >
+                  <Shield className="h-5 w-5 text-primary-foreground" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" sideOffset={8} className="w-80 p-0 border-border">
+                <div className="rounded-2xl bg-card p-4">
+                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10">
+                    <Shield className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="mb-4 text-center">
+                    <h2 className="text-base font-semibold text-foreground">Admin Portal</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Continue in public view or sign in as admin.
+                    </p>
+                  </div>
+                  <div className="space-y-5">
+                    <Link to="/">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-center rounded-xl border-2 border-accent/40 bg-gradient-to-r from-accent/5 to-info/5 text-accent shadow-sm hover:border-accent hover:from-accent/10 hover:to-info/10"
+                      >
+                        Public View
+                      </Button>
+                    </Link>
+                    <Link to="/admin" className="block">
+                      <Button
+                        size="sm"
+                        className="w-full justify-center rounded-xl bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                      >
+                        Sign in as admin
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
         </nav>
       </div>

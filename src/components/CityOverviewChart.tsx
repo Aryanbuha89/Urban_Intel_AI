@@ -6,6 +6,7 @@ import {
   Zap,
   Construction,
   Activity,
+  LucideIcon,
 } from 'lucide-react';
 import { useCityContext } from '@/contexts/CityContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +18,7 @@ type SystemLevel = 'low' | 'medium' | 'high' | 'critical';
 type OverviewItem = {
   key: string;
   title: string;
-  icon: any;
+  icon: LucideIcon;
   level: SystemLevel;
   valueLabel: string;
   mainLine: string;
