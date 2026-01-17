@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Zap, TrendingDown, Check } from 'lucide-react';
+import { Zap, TrendingDown, TrendingUp, Check, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { PolicyOption } from '@/lib/mockData';
@@ -23,6 +23,35 @@ const priorityLabels = {
   3: { text: 'Low Risk', color: 'bg-info/10 text-info' }
 };
 
+const getImpactStyle = (text: string) => {
+  const lowerText = text.toLowerCase();
+
+  // Negative / High Risk / Increase (Bad cases usually)
+  if (lowerText.includes('increase') || lowerText.includes('high') || lowerText.includes('risk') || lowerText.includes('warning') || lowerText.includes('hazardous')) {
+    return {
+      icon: TrendingUp,
+      color: 'text-destructive',
+      bgColor: 'bg-destructive/10'
+    };
+  }
+
+  // Positive / Decrease / Safe
+  if (lowerText.includes('decrease') || lowerText.includes('low') || lowerText.includes('safe') || lowerText.includes('stable')) {
+    return {
+      icon: TrendingDown,
+      color: 'text-success', // Assuming success is green
+      bgColor: 'bg-success/10'
+    };
+  }
+
+  // Default
+  return {
+    icon: Zap, // Or Info
+    color: 'text-accent',
+    bgColor: 'bg-accent/10'
+  };
+};
+
 const RecommendationCard = ({ option, index, onApprove, isApproved }: RecommendationCardProps) => {
   const priority = (option.id as 1 | 2 | 3) || 1;
 
@@ -34,16 +63,11 @@ const RecommendationCard = ({ option, index, onApprove, isApproved }: Recommenda
       whileHover={{ scale: 1.02 }}
       className={cn(
         'relative overflow-hidden rounded-2xl border-2 p-6 transition-all duration-300',
-        isApproved 
-          ? 'border-success/50 bg-success/5' 
+        isApproved
+          ? 'border-success/50 bg-success/5'
           : priorityColors[priority]
       )}
     >
-      {/* Option number badge */}
-      <div className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-foreground/10 text-lg font-bold text-foreground/60">
-        {option.id}
-      </div>
-
       {/* Priority badge */}
       <div className="mb-4 flex items-center gap-2">
         <span className={cn(
@@ -69,10 +93,16 @@ const RecommendationCard = ({ option, index, onApprove, isApproved }: Recommenda
       </p>
 
       {/* Impact prediction */}
-      <div className="mb-6 flex items-center gap-2 rounded-lg bg-foreground/5 p-3">
-        <TrendingDown className="h-5 w-5 text-accent" />
-        <span className="text-sm font-medium text-foreground">{option.impact}</span>
-      </div>
+      {/* Impact prediction */}
+      {(() => {
+        const { icon: Icon, color, bgColor } = getImpactStyle(option.impact);
+        return (
+          <div className={cn("mb-6 flex items-center gap-2 rounded-lg p-3", bgColor)}>
+            <Icon className={cn("h-5 w-5", color)} />
+            <span className={cn("text-sm font-medium", color)}>{option.impact}</span>
+          </div>
+        );
+      })()}
 
       {/* Approve button */}
       <Button
