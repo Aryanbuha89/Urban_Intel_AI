@@ -17,260 +17,247 @@ const ReportGenerator = () => {
     try {
       const pdf = new jsPDF();
       const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
       let yPos = 20;
 
-      // Helper function to add text with word wrap
-      const addWrappedText = (text: string, x: number, y: number, maxWidth: number, lineHeight: number = 6) => {
-        const lines = pdf.splitTextToSize(text, maxWidth);
-        lines.forEach((line: string) => {
-          if (yPos > 270) {
-            pdf.addPage();
-            yPos = 20;
-          }
-          pdf.text(line, x, yPos);
-          yPos += lineHeight;
-        });
-        return yPos;
+      // Colors
+      const primaryColor = [13, 148, 136]; // Teal-600
+      const secondaryColor = [30, 41, 59]; // Slate-800
+      const accentColor = [249, 115, 22]; // Orange-500
+      const lightBg = [248, 250, 252]; // Slate-50
+
+      // Helper: Draw Header
+      const drawHeader = () => {
+        pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        pdf.rect(0, 0, pageWidth, 40, 'F');
+
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(24);
+        pdf.setTextColor(255, 255, 255);
+        pdf.text('UrbanIntel', margin, 20);
+
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('AI-Powered Smart City Report', margin, 28);
+
+        pdf.setFontSize(10);
+        pdf.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - margin, 15, { align: 'right' });
+
+        yPos = 50;
       };
 
-      // Title
-      pdf.setFontSize(22);
-      pdf.setTextColor(13, 110, 110); // Primary color
-      pdf.text('UrbanIntel - Government Report', pageWidth / 2, yPos, { align: 'center' });
-      yPos += 10;
-
-      pdf.setFontSize(12);
-      pdf.setTextColor(100);
-      pdf.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, yPos, { align: 'center' });
-      yPos += 15;
-
-      // Divider
-      pdf.setDrawColor(200);
-      pdf.line(20, yPos, pageWidth - 20, yPos);
-      yPos += 10;
-
-      // Section: Current Data Summary
-      pdf.setFontSize(16);
-      pdf.setTextColor(0);
-      pdf.text('1. Current City Data', 20, yPos);
-      yPos += 10;
-
-      pdf.setFontSize(10);
-      pdf.setTextColor(60);
-
-      // Weather
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Weather:', 20, yPos);
-      pdf.setFont('helvetica', 'normal');
-      yPos += 6;
-      addWrappedText(`Temperature: ${data.weather.currentTemperature}°C, Humidity: ${data.weather.humidity}%, Wind: ${data.weather.windSpeed} km/h`, 25, yPos, 160);
-      addWrappedText(`Annual Rainfall: ${data.weather.rainfallLast12Months.reduce((a, b) => a + b, 0)}mm (12 months)`, 25, yPos, 160);
-      if (data.weather.recentStormOrFlood) {
-        addWrappedText('⚠️ Recent storm/flood event detected', 25, yPos, 160);
-      }
-      yPos += 4;
-
-      // Transportation
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Transportation:', 20, yPos);
-      pdf.setFont('helvetica', 'normal');
-      yPos += 6;
-      addWrappedText(`Buses Operating: ${data.transportation.busesOperating}/${data.transportation.totalBuses}`, 25, yPos, 160);
-      addWrappedText(`Avg Vehicles/Hour: ${data.transportation.avgVehiclesPerHour.toLocaleString()}`, 25, yPos, 160);
-      if (data.transportation.busRoutesCongested.length > 0) {
-        addWrappedText(`Congested Routes: ${data.transportation.busRoutesCongested.join(', ')}`, 25, yPos, 160);
-      }
-      yPos += 4;
-
-      // Agriculture
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Agriculture Supply Chain:', 20, yPos);
-      pdf.setFont('helvetica', 'normal');
-      yPos += 6;
-      addWrappedText(`Crop Yield (Last Year): ${Math.round(data.agriculture.cropYieldLastYear)}% of normal`, 25, yPos, 160);
-      addWrappedText(`Stock Level: ${Math.round(data.agriculture.currentStockLevel)}%, Supply Chain Efficiency: ${Math.round(data.agriculture.supplyChainEfficiency)}%`, 25, yPos, 160);
-      yPos += 4;
-
-      // Energy
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Energy:', 20, yPos);
-      pdf.setFont('helvetica', 'normal');
-      yPos += 6;
-      addWrappedText(`Current Usage: ${data.energy.currentUsageMW} MW, Peak Demand: ${data.energy.peakDemandMW} MW`, 25, yPos, 160);
-      addWrappedText(`Grid Stability: ${data.energy.gridStability}%, Renewable: ${data.energy.renewablePercentage}%`, 25, yPos, 160);
-      yPos += 4;
-
-      // Public Services
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Public Services:', 20, yPos);
-      pdf.setFont('helvetica', 'normal');
-      yPos += 6;
-      addWrappedText(`Roads Needing Repair: ${data.publicServices.roadsNeedingRepair}, Water Supply: ${data.publicServices.waterSupplyLevel}%`, 25, yPos, 160);
-      addWrappedText(`Emergency Response Time: ${data.publicServices.emergencyResponseTime} minutes`, 25, yPos, 160);
-      yPos += 10;
-
-      // Section: AI Predictions
-      if (yPos > 200) {
-        pdf.addPage();
-        yPos = 20;
-      }
-
-      pdf.setFontSize(16);
-      pdf.setTextColor(0);
-      pdf.text('2. AI Predictions', 20, yPos);
-      yPos += 10;
-
-      pdf.setFontSize(10);
-      pdf.setTextColor(60);
-
-      // Water Supply
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Water Supply - Status: ${predictions.waterSupply.status.toUpperCase()}`, 20, yPos);
-      pdf.setFont('helvetica', 'normal');
-      yPos += 6;
-      addWrappedText(`Shortage Level: ${predictions.waterSupply.shortageLevel}%, Duration: ${predictions.waterSupply.shortageDuration}`, 25, yPos, 160);
-      addWrappedText(`Reason: ${predictions.waterSupply.reason}`, 25, yPos, 160);
-      addWrappedText(`Confidence: ${predictions.waterSupply.confidence}%`, 25, yPos, 160);
-      yPos += 4;
-
-      // Traffic
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Traffic - Congestion: ${predictions.traffic.congestionLevel}%`, 20, yPos);
-      pdf.setFont('helvetica', 'normal');
-      yPos += 6;
-      addWrappedText(`Peak Hours: ${predictions.traffic.peakHours}`, 25, yPos, 160);
-      if (predictions.traffic.roadsToAvoid.length > 0) {
-        addWrappedText(`Roads to Avoid: ${predictions.traffic.roadsToAvoid.join(', ')}`, 25, yPos, 160);
-      }
-      addWrappedText(`Weather Impact: ${predictions.traffic.weatherImpact}`, 25, yPos, 160);
-      addWrappedText(`Bus Impact: ${predictions.traffic.busImpact}`, 25, yPos, 160);
-      addWrappedText(`Confidence: ${predictions.traffic.confidence}%`, 25, yPos, 160);
-      yPos += 4;
-
-      // Food Price
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Food Prices - Change: ${predictions.foodPrice.priceChangePercent > 0 ? '+' : ''}${predictions.foodPrice.priceChangePercent}%`, 20, yPos);
-      pdf.setFont('helvetica', 'normal');
-      yPos += 6;
-      addWrappedText(`Supply Status: ${predictions.foodPrice.supplyStatus}`, 25, yPos, 160);
-      if (predictions.foodPrice.affectedItems.length > 0) {
-        addWrappedText(`Affected Items: ${predictions.foodPrice.affectedItems.join(', ')}`, 25, yPos, 160);
-      }
-      addWrappedText(`Reason: ${predictions.foodPrice.reason}`, 25, yPos, 160);
-      addWrappedText(`Confidence: ${predictions.foodPrice.confidence}%`, 25, yPos, 160);
-      yPos += 4;
-
-      // Energy Price
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Energy Prices - Change: ${predictions.energyPrice.priceChangePercent > 0 ? '+' : ''}${predictions.energyPrice.priceChangePercent}%`, 20, yPos);
-      pdf.setFont('helvetica', 'normal');
-      yPos += 6;
-      addWrappedText(`Current Rate: ₹${predictions.energyPrice.currentRate}/unit → Predicted: ₹${predictions.energyPrice.predictedRate}/unit`, 25, yPos, 160);
-      addWrappedText(`Reason: ${predictions.energyPrice.reason}`, 25, yPos, 160);
-      addWrappedText(`Confidence: ${predictions.energyPrice.confidence}%`, 25, yPos, 160);
-      yPos += 4;
-
-      // Public Services
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Public Services Forecast', 20, yPos);
-      pdf.setFont('helvetica', 'normal');
-      yPos += 6;
-      addWrappedText(`Maintenance Plan: ${predictions.publicServices.roadMaintenancePlan}`, 25, yPos, 160);
-      addWrappedText(`Timeline: ${predictions.publicServices.maintenanceTimeline}`, 25, yPos, 160);
-      if (predictions.publicServices.cleanupNeeded) {
-        addWrappedText(`⚠️ Cleanup Required: ${predictions.publicServices.cleanupReason}`, 25, yPos, 160);
-        addWrappedText(`Duration: ${predictions.publicServices.cleanupDuration}`, 25, yPos, 160);
-      }
-      addWrappedText(`Confidence: ${predictions.publicServices.confidence}%`, 25, yPos, 160);
-      yPos += 10;
-
-      // Section: Recommendations
-      if (yPos > 200) {
-        pdf.addPage();
-        yPos = 20;
-      }
-
-      pdf.setFontSize(16);
-      pdf.setTextColor(0);
-      pdf.text('3. AI Recommendations', 20, yPos);
-      yPos += 10;
-
-      pdf.setFontSize(10);
-      recommendations.forEach((rec, index) => {
-        if (yPos > 250) {
+      // Helper: Draw Section Title
+      const drawSectionTitle = (title: string, icon: string = '') => {
+        if (yPos > pageHeight - 40) {
           pdf.addPage();
-          yPos = 20;
+          drawHeader();
         }
 
         pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(0);
-        pdf.text(`Option ${index + 1}: ${rec.title}`, 20, yPos);
-        yPos += 6;
+        pdf.setFontSize(16);
+        pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        pdf.text(title, margin, yPos);
 
+        // Underline
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(margin, yPos + 3, pageWidth - margin, yPos + 3);
+
+        yPos += 15;
+      };
+
+      // Helper: Draw Card
+      const drawCard = (x: number, y: number, width: number, height: number, title: string, content: string[], type: 'normal' | 'alert' | 'success' = 'normal') => {
+        // Background
+        pdf.setFillColor(255, 255, 255);
+        if (type === 'alert') pdf.setDrawColor(239, 68, 68); // Red border
+        else if (type === 'success') pdf.setDrawColor(34, 197, 94); // Green border
+        else pdf.setDrawColor(226, 232, 240); // Gray border
+
+        pdf.roundedRect(x, y, width, height, 3, 3, 'FD');
+
+        // Title strip
+        if (type === 'alert') pdf.setFillColor(254, 226, 226);
+        else if (type === 'success') pdf.setFillColor(220, 252, 231);
+        else pdf.setFillColor(241, 245, 249);
+
+        pdf.rect(x, y, width, 10, 'F');
+
+        // Title text
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        pdf.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        pdf.text(title, x + 5, y + 7);
+
+        // Content
         pdf.setFont('helvetica', 'normal');
-        pdf.setTextColor(60);
-        addWrappedText(`Category: ${rec.category}`, 25, yPos, 160);
-        addWrappedText(`Description: ${rec.description}`, 25, yPos, 160);
-        addWrappedText(`Impact: ${rec.impact}`, 25, yPos, 160);
-        addWrappedText(`Public Message: ${rec.instructionText}`, 25, yPos, 160);
-        addWrappedText(`Based On: ${rec.basedOn.join(', ')}`, 25, yPos, 160);
-        yPos += 6;
-      });
+        pdf.setFontSize(9);
+        pdf.setTextColor(71, 85, 105); // Slate-600
 
-      // Section: Decision History
-      if (yPos > 200) {
+        let contentY = y + 16;
+        content.forEach(line => {
+          pdf.text(line, x + 5, contentY);
+          contentY += 5;
+        });
+      };
+
+      // Start Generation
+      drawHeader();
+
+      // 1. Executive Summary (City Data)
+      drawSectionTitle('City Status Overview');
+
+      const colWidth = (pageWidth - (margin * 3)) / 2;
+
+      // Left Column: Weather & Transport
+      drawCard(margin, yPos, colWidth, 40, 'Weather Conditions', [
+        `Temp: ${data.weather.currentTemperature}°C | Humidity: ${data.weather.humidity}%`,
+        `Wind: ${data.weather.windSpeed} km/h`,
+        `Rainfall (12m): ${data.weather.rainfallLast12Months.reduce((a, b) => a + b, 0)}mm`,
+        data.weather.recentStormOrFlood ? '! Recent Storm Alert' : 'No Active Storms'
+      ]);
+
+      drawCard(margin, yPos + 45, colWidth, 40, 'Transportation Network', [
+        `Fleet Status: ${data.transportation.busesOperating}/${data.transportation.totalBuses} Buses`,
+        `Traffic Volume: ${data.transportation.avgVehiclesPerHour.toLocaleString()}/hr`,
+        `Congestion: ${data.transportation.busRoutesCongested.length > 0
+          ? `${data.transportation.busRoutesCongested.length} Routes`
+          : 'Minimal'}`
+      ]);
+
+      // Right Column: Energy & Public Services
+      drawCard(margin + colWidth + margin, yPos, colWidth, 40, 'Energy Grid', [
+        `Load: ${data.energy.currentUsageMW} MW / ${data.energy.peakDemandMW} MW`,
+        `Grid Stability: ${data.energy.gridStability}%`,
+        `Renewables: ${data.energy.renewablePercentage}% Mix`
+      ]);
+
+      drawCard(margin + colWidth + margin, yPos + 45, colWidth, 40, 'Public Infrastructure', [
+        `Road Repairs Needed: ${data.publicServices.roadsNeedingRepair}`,
+        `Water Reserves: ${data.publicServices.waterSupplyLevel}%`,
+        `EMS Response: ${data.publicServices.emergencyResponseTime} min`
+      ]);
+
+      yPos += 95;
+
+      // 2. AI Intelligence Report
+      drawSectionTitle('AI Predictive Analysis');
+
+      const predictHeight = 35;
+
+      // Traffic Prediction
+      drawCard(margin, yPos, pageWidth - (margin * 2), predictHeight,
+        `Traffic Forecast (Confidence: ${predictions.traffic.confidence}%)`,
+        [
+          `Status: ${predictions.traffic.congestionLevel}% Congestion Level`,
+          `Impact Analysis: ${predictions.traffic.weatherImpact}`,
+          `Advisory: ${predictions.traffic.roadsToAvoid.length > 0 ? `Avoid ${predictions.traffic.roadsToAvoid.join(', ')}` : 'Normal Flow'}`
+        ],
+        predictions.traffic.congestionLevel > 70 ? 'alert' : 'normal'
+      );
+      yPos += predictHeight + 5;
+
+      // Water Prediction
+      drawCard(margin, yPos, pageWidth - (margin * 2), predictHeight,
+        `Water Security (Confidence: ${predictions.waterSupply.confidence}%)`,
+        [
+          `Status: ${predictions.waterSupply.status.toUpperCase()}`,
+          `Forecast: ${predictions.waterSupply.reason}`,
+          `Duration: ${predictions.waterSupply.shortageDuration}`
+        ],
+        predictions.waterSupply.status === 'critical' ? 'alert' : 'normal'
+      );
+      yPos += predictHeight + 5;
+
+      // Energy Prediction
+      drawCard(margin, yPos, pageWidth - (margin * 2), predictHeight,
+        `Energy Pricing Model (Confidence: ${predictions.energyPrice.confidence}%)`,
+        [
+          `Trend: ${predictions.energyPrice.priceChangePercent > 0 ? '+' : ''}${predictions.energyPrice.priceChangePercent}% Change`,
+          `Rate Forecast: ${predictions.energyPrice.currentRate} -> ${predictions.energyPrice.predictedRate}`,
+          `Driver: ${predictions.energyPrice.reason}`
+        ],
+        'success'
+      );
+      yPos += predictHeight + 15;
+
+      // 3. Recommendations
+      if (yPos > pageHeight - 60) {
         pdf.addPage();
-        yPos = 20;
+        drawHeader();
       }
+      drawSectionTitle('Strategic Recommendations');
 
-      pdf.setFontSize(16);
-      pdf.setTextColor(0);
-      pdf.text('4. Recent Decisions', 20, yPos);
-      yPos += 10;
-
-      pdf.setFontSize(10);
-      const recentDecisions = decisionHistory.slice(0, 5);
-      recentDecisions.forEach((decision) => {
-        if (yPos > 260) {
+      recommendations.forEach((rec, i) => {
+        if (yPos > pageHeight - 50) {
           pdf.addPage();
-          yPos = 20;
+          drawHeader();
         }
 
         pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(0);
-        pdf.text(`${decision.alertType} - ${new Date(decision.publishedAt || decision.createdAt).toLocaleDateString()}`, 20, yPos);
-        yPos += 6;
+        pdf.setFontSize(11);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(`${i + 1}. ${rec.title}`, margin, yPos);
+        yPos += 5;
 
         pdf.setFont('helvetica', 'normal');
-        pdf.setTextColor(60);
-        addWrappedText(`Status: ${decision.status}, Approved By: ${decision.approvedBy || 'N/A'}`, 25, yPos, 160);
+        pdf.setFontSize(10);
+        pdf.setTextColor(60, 60, 60);
 
-        const selectedOption = decision.aiOptions.find(o => o.id === decision.selectedOptionId);
-        if (selectedOption) {
-          addWrappedText(`Decision: ${selectedOption.title}`, 25, yPos, 160);
-        }
-        yPos += 4;
+        const descLines = pdf.splitTextToSize(rec.description, pageWidth - (margin * 2));
+        pdf.text(descLines, margin, yPos);
+        yPos += (descLines.length * 5) + 2;
+
+        pdf.setFontSize(9);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(`Impact: ${rec.impact} | Category: ${rec.category}`, margin, yPos);
+
+        yPos += 10;
+        pdf.setDrawColor(230);
+        pdf.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 10;
       });
 
-      // Footer
+      // 4. Decision Log
+      if (decisionHistory.length > 0) {
+        if (yPos > pageHeight - 60) {
+          pdf.addPage();
+          drawHeader();
+        }
+        drawSectionTitle('Recent Policy Decisions');
+
+        const pastResolutions = decisionHistory.slice(0, 5);
+        pastResolutions.forEach((dec) => {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(10);
+          pdf.setTextColor(0);
+          pdf.text(`${new Date(dec.publishedAt || dec.createdAt).toLocaleDateString()} - ${dec.alertType}`, margin, yPos);
+
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`Status: ${dec.status} (Approved by ${dec.approvedBy})`, margin + 80, yPos);
+
+          yPos += 6;
+        });
+      }
+
+      // Footer (All Pages)
       const pageCount = pdf.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         pdf.setPage(i);
+        pdf.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        pdf.rect(0, pageHeight - 10, pageWidth, 10, 'F');
+
         pdf.setFontSize(8);
-        pdf.setTextColor(150);
-        pdf.text(
-          `UrbanIntel Government Report - Page ${i} of ${pageCount}`,
-          pageWidth / 2,
-          pdf.internal.pageSize.getHeight() - 10,
-          { align: 'center' }
-        );
+        pdf.setTextColor(255, 255, 255);
+        pdf.text(`UrbanIntel Official Document | Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 4, { align: 'center' });
       }
 
-      // Save the PDF
-      pdf.save(`UrbanIntel_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+      // Save
+      pdf.save(`UrbanIntel_Premium_Report_${new Date().toISOString().split('T')[0]}.pdf`);
 
-      // Save report metadata to Supabase
+      // Database Save (Keep existing logic)
       if (userProfile?.role === 'admin') {
+        // ... existing DB save logic ...
         const reportContent = {
           generatedAt: new Date().toISOString(),
           weather: data.weather,
@@ -286,10 +273,9 @@ const ReportGenerator = () => {
           admin_id: (await supabase.auth.getUser()).data.user?.id
         });
 
-        if (error) {
-          console.error('Failed to save report to database:', error);
-        }
+        if (error) console.error('DB Report Save Error:', error);
       }
+
     } catch (error) {
       console.error('Error generating PDF:', error);
     } finally {
