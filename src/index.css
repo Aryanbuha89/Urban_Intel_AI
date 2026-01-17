@@ -1,0 +1,190 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* UrbanPulse Design System - Nature & Clarity Theme */
+
+@layer base {
+  :root {
+    /* Core backgrounds - Pale blue sky */
+    --background: 204 100% 97%;
+    --foreground: 215 28% 17%;
+
+    /* Cards - Pure white with depth */
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 17%;
+
+    /* Primary - Deep Ocean Blue */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Soft Mint Green */
+    --secondary: 142 76% 94%;
+    --secondary-foreground: 158 64% 32%;
+
+    /* Muted - Soft grays */
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent - Emerald Nature */
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Semantic colors */
+    --success: 158 64% 40%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Borders & Inputs */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 60%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar - consistent with theme */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 28% 17%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 160 84% 39%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 217 91% 60%;
+
+    /* Custom gradients for UrbanPulse */
+    --gradient-sky: linear-gradient(135deg, hsl(204 100% 97%) 0%, hsl(199 95% 93%) 100%);
+    --gradient-nature: linear-gradient(135deg, hsl(142 76% 94%) 0%, hsl(160 84% 90%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(204 100% 97%) 0%, hsl(199 89% 94%) 50%, hsl(142 76% 96%) 100%);
+    --gradient-card-hover: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(204 100% 98%) 100%);
+    
+    /* Metric card gradients */
+    --gradient-traffic: linear-gradient(135deg, hsl(38 92% 95%) 0%, hsl(25 95% 90%) 100%);
+    --gradient-air: linear-gradient(135deg, hsl(199 89% 94%) 0%, hsl(217 91% 92%) 100%);
+    --gradient-water: linear-gradient(135deg, hsl(199 95% 93%) 0%, hsl(199 89% 88%) 100%);
+    --gradient-agriculture: linear-gradient(135deg, hsl(142 76% 94%) 0%, hsl(158 64% 88%) 100%);
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 13%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 13%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 160 84% 20%;
+    --secondary-foreground: 142 76% 94%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    --success: 158 64% 40%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 213 27% 84%;
+
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 160 84% 39%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .gradient-sky {
+    background: var(--gradient-sky);
+  }
+  
+  .gradient-nature {
+    background: var(--gradient-nature);
+  }
+
+  .gradient-traffic {
+    background: var(--gradient-traffic);
+  }
+
+  .gradient-air {
+    background: var(--gradient-air);
+  }
+
+  .gradient-water {
+    background: var(--gradient-water);
+  }
+
+  .gradient-agriculture {
+    background: var(--gradient-agriculture);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .card-shadow {
+    box-shadow: 0 4px 20px -4px hsl(217 91% 60% / 0.08), 
+                0 1px 3px hsl(215 28% 17% / 0.04);
+  }
+
+  .card-shadow-hover {
+    box-shadow: 0 8px 30px -4px hsl(217 91% 60% / 0.12), 
+                0 4px 8px hsl(215 28% 17% / 0.06);
+  }
+
+  .floating-shadow {
+    box-shadow: 0 20px 50px -12px hsl(217 91% 60% / 0.15),
+                0 8px 20px hsl(215 28% 17% / 0.08);
+  }
+}
