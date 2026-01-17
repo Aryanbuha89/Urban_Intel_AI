@@ -44,17 +44,19 @@ def compute_water_status(row: pd.Series) -> str:
 
 
 def compute_food_price_change(row: pd.Series) -> float:
-    total_rainfall = row["rainfall_last_12_months_mm"]
-    is_low_rainfall = total_rainfall < 1050.0
     price_change = 0.0
-    if is_low_rainfall:
+    total_rainfall = row["rainfall_last_12_months_mm"]
+    if total_rainfall < 1050.0:
         price_change += 15.0
+    if row["rainfall_mm"] > 30.0:
+        price_change += 5.0
+    if row["recent_storm_or_flood"] == 1:
+        price_change += 5.0
     if row["current_stock_level"] < 50.0:
         price_change += 10.0
     if row["supply_chain_efficiency"] < 70.0:
         price_change += 8.0
-    water_status = compute_water_status(row)
-    if water_status in {"critical", "shortage"}:
+    if row["import_dependency"] > 25.0:
         price_change += 5.0
     return price_change
 
@@ -63,12 +65,13 @@ def train_food_price_model() -> RandomForestRegressor:
     df = load_or_create_dataset()
     df["price_change_percent"] = df.apply(compute_food_price_change, axis=1)
     feature_columns = [
+        "rainfall_mm",
         "rainfall_last_12_months_mm",
         "crop_yield_last_year",
         "current_stock_level",
         "supply_chain_efficiency",
         "import_dependency",
-        "water_supply_level",
+        "recent_storm_or_flood",
     ]
     X = df[feature_columns]
     y = df["price_change_percent"]
@@ -93,4 +96,3 @@ def train_food_price_model() -> RandomForestRegressor:
 
 if __name__ == "__main__":
     train_food_price_model()
-

@@ -42,11 +42,9 @@ def train_water_model() -> RandomForestRegressor:
     df["shortage_level"] = df.apply(compute_water_shortage_level, axis=1)
     feature_columns = [
         "rainfall_last_12_months_mm",
+        "rainfall_mm",
+        "recent_storm_or_flood",
         "water_supply_level",
-        "roads_needing_repair",
-        "sewer_system_health",
-        "emergency_response_time",
-        "pending_maintenance_tasks",
     ]
     X = df[feature_columns]
     y = df["shortage_level"]
@@ -71,4 +69,3 @@ def train_water_model() -> RandomForestRegressor:
 
 if __name__ == "__main__":
     train_water_model()
-

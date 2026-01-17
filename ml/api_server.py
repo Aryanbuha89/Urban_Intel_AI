@@ -167,11 +167,9 @@ def predict_all(city: CityInput) -> ModelOutputs:
         [
             {
                 "rainfall_last_12_months_mm": rainfall_last_12,
+                "rainfall_mm": w.currentRainfall,
+                "recent_storm_or_flood": recent_storm_flag,
                 "water_supply_level": p.waterSupplyLevel,
-                "roads_needing_repair": p.roadsNeedingRepair,
-                "sewer_system_health": p.sewerSystemHealth,
-                "emergency_response_time": p.emergencyResponseTime,
-                "pending_maintenance_tasks": p.pendingMaintenanceTasks,
             }
         ]
     )
@@ -183,15 +181,11 @@ def predict_all(city: CityInput) -> ModelOutputs:
     traffic_features = pd.DataFrame(
         [
             {
-                "temperature_c": w.currentTemperature,
-                "humidity": w.humidity,
                 "wind_speed_kmh": w.windSpeed,
                 "rainfall_mm": w.currentRainfall,
-                "rainfall_last_12_months_mm": rainfall_last_12,
                 "recent_storm_or_flood": recent_storm_flag,
                 "aqi": w.aqi,
                 "buses_operating": t.busesOperating,
-                "total_buses": t.totalBuses,
                 "avg_vehicles_per_hour": t.avgVehiclesPerHour,
                 "peak_hour_multiplier": t.peakHourMultiplier,
                 "congested_west": congested_west,
@@ -199,6 +193,7 @@ def predict_all(city: CityInput) -> ModelOutputs:
                 "congested_east": congested_east,
                 "congested_north": congested_north,
                 "congested_central": congested_central,
+                "roads_needing_repair": p.roadsNeedingRepair,
             }
         ]
     )
@@ -210,12 +205,13 @@ def predict_all(city: CityInput) -> ModelOutputs:
     food_features = pd.DataFrame(
         [
             {
+                "rainfall_mm": w.currentRainfall,
                 "rainfall_last_12_months_mm": rainfall_last_12,
                 "crop_yield_last_year": a.cropYieldLastYear,
                 "current_stock_level": a.currentStockLevel,
                 "supply_chain_efficiency": a.supplyChainEfficiency,
                 "import_dependency": a.importDependency,
-                "water_supply_level": p.waterSupplyLevel,
+                "recent_storm_or_flood": recent_storm_flag,
             }
         ]
     )
@@ -232,6 +228,7 @@ def predict_all(city: CityInput) -> ModelOutputs:
                 "peak_demand_mw": e.peakDemandMW,
                 "grid_stability": e.gridStability,
                 "renewable_percentage": e.renewablePercentage,
+                "recent_storm_or_flood": recent_storm_flag,
             }
         ]
     )

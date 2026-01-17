@@ -7,14 +7,20 @@ from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import train_test_split
 
 from ml.generate_energy_data import build_energy_dataset
+from ml.weather_data_pipeline import build_weather_dataset
 
 
 def load_or_create_dataset() -> pd.DataFrame:
     energy_path = "ml/data/energy_data.csv"
+    weather_path = "ml/data/weather_data.csv"
     if not os.path.exists(energy_path):
         build_energy_dataset(output_path=energy_path)
+    if not os.path.exists(weather_path):
+        build_weather_dataset(output_path=weather_path)
     energy = pd.read_csv(energy_path)
-    return energy
+    weather = pd.read_csv(weather_path)
+    df = pd.merge(energy, weather, on="sample_id", how="inner")
+    return df
 
 
 def compute_energy_price_change(row: pd.Series) -> float:
@@ -29,6 +35,8 @@ def compute_energy_price_change(row: pd.Series) -> float:
         price_change += 8.0
     if row["grid_stability"] < 90.0:
         price_change += 5.0
+    if row["recent_storm_or_flood"] == 1:
+        price_change += 4.0
     return price_change
 
 
@@ -41,6 +49,7 @@ def train_energy_price_model() -> RandomForestRegressor:
         "peak_demand_mw",
         "grid_stability",
         "renewable_percentage",
+        "recent_storm_or_flood",
     ]
     X = df[feature_columns]
     y = df["price_change_percent"]
@@ -65,4 +74,3 @@ def train_energy_price_model() -> RandomForestRegressor:
 
 if __name__ == "__main__":
     train_energy_price_model()
-
