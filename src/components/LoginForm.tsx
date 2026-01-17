@@ -45,7 +45,7 @@ const LoginForm = () => {
             </div>
             <h1 className="text-2xl font-bold text-foreground">Government Portal</h1>
             <p className="mt-2 text-muted-foreground">
-              Access the UrbanPulse Command Center
+              Access the Urban Intel AI Command Center
             </p>
           </div>
 
@@ -105,8 +105,12 @@ const LoginForm = () => {
 
           {/* Hint */}
           <div className="mt-6 rounded-xl bg-muted/50 p-4 text-center text-sm text-muted-foreground">
-            <p className="font-medium">Use your Supabase credentials</p>
+            <p className="font-medium mb-1">Demo Credentials:</p>
+            <p className="font-mono text-xs">Email: hack1throne@gmail.com</p>
+            <p className="font-mono text-xs">Pass: Krushit@123</p>
           </div>
+
+
         </div>
       </motion.div>
     </div>
