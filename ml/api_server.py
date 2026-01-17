@@ -245,12 +245,19 @@ def predict_all(city: CityInput) -> ModelOutputs:
                 "sewer_system_health": p.sewerSystemHealth,
                 "emergency_response_time": p.emergencyResponseTime,
                 "pending_maintenance_tasks": p.pendingMaintenanceTasks,
-                "rainfall_mm": w.currentRainfall,
-                "rainfall_last_12_months_mm": rainfall_last_12,
-                "aqi": w.aqi,
+                "recent_storm_or_flood": recent_storm_flag,
             }
         ]
     )
+    public_feature_order = [
+        "roads_needing_repair",
+        "water_supply_level",
+        "sewer_system_health",
+        "emergency_response_time",
+        "pending_maintenance_tasks",
+        "recent_storm_or_flood",
+    ]
+    public_features = public_features[public_feature_order]
     if public_model is not None:
         public_cleanup_needed_pred = public_model.predict(public_features)[0]
         public_cleanup_needed = bool(int(public_cleanup_needed_pred))
@@ -261,12 +268,11 @@ def predict_all(city: CityInput) -> ModelOutputs:
         [
             {
                 "temperature_c": w.currentTemperature,
-                "humidity": w.humidity,
-                "wind_speed_kmh": w.windSpeed,
                 "rainfall_mm": w.currentRainfall,
-                "rainfall_last_12_months_mm": rainfall_last_12,
                 "aqi": w.aqi,
-                "congestion_level": traffic_congestion_level,
+                "recent_storm_or_flood": recent_storm_flag,
+                "sewer_system_health": p.sewerSystemHealth,
+                "emergency_response_time": p.emergencyResponseTime,
             }
         ]
     )

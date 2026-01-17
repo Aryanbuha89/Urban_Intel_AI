@@ -6,69 +6,66 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
 
-from ml.generate_transportation_data import build_transportation_dataset
+from ml.generate_public_services_data import build_public_services_dataset
 from ml.weather_data_pipeline import build_weather_dataset
 
 
 def load_or_create_dataset() -> pd.DataFrame:
     weather_path = "ml/data/weather_data.csv"
-    transport_path = "ml/data/transportation_data.csv"
+    public_path = "ml/data/public_services_data.csv"
     if not os.path.exists(weather_path):
         build_weather_dataset(output_path=weather_path)
-    if not os.path.exists(transport_path):
-        build_transportation_dataset(output_path=transport_path)
+    if not os.path.exists(public_path):
+        build_public_services_dataset(output_path=public_path)
     weather = pd.read_csv(weather_path)
-    transport = pd.read_csv(transport_path)
-    df = pd.merge(weather, transport, on="sample_id", how="inner")
+    public = pd.read_csv(public_path)
+    df = pd.merge(weather, public, on="sample_id", how="inner")
     return df
 
 
-def compute_congestion_level(row: pd.Series) -> float:
-    congestion = 40.0
-    buses_ratio = row["buses_operating"] / max(row["total_buses"], 1.0)
-    if buses_ratio > 0.8:
-        congestion += 20.0
-    harsh_weather = False
-    if row["temperature_c"] > 40.0 or row["rainfall_mm"] > 30.0 or row["wind_speed_kmh"] > 20.0:
-        harsh_weather = True
-    if harsh_weather:
-        congestion += 25.0
-    if congestion < 0.0:
-        congestion = 0.0
-    if congestion > 100.0:
-        congestion = 100.0
-    return congestion
-
-
 def compute_health_status(row: pd.Series) -> int:
-    congestion_level = row["congestion_level"]
-    effective_aqi = row["aqi"]
-    if congestion_level > 70.0:
-        effective_aqi += 20.0
-    if congestion_level > 90.0:
-        effective_aqi += 40.0
+    score = 0.0
+    temperature = row["temperature_c"]
+    rainfall = row["rainfall_mm"]
+    aqi = row["aqi"]
+    sewer_health = row["sewer_system_health"]
+    response_time = row["emergency_response_time"]
+    if temperature > 40.0 or temperature < 5.0:
+        score += 1.0
+    if rainfall > 40.0:
+        score += 0.5
+    if row["recent_storm_or_flood"] == 1:
+        score += 0.5
+    if aqi > 300.0:
+        score += 2.0
+    elif aqi > 200.0:
+        score += 1.5
+    elif aqi > 100.0:
+        score += 1.0
+    if sewer_health < 75.0:
+        score += 1.0
+    if response_time > 20.0:
+        score += 1.0
     status = 0
-    if effective_aqi > 300.0:
+    if score >= 4.0:
         status = 3
-    elif effective_aqi > 200.0:
+    elif score >= 2.5:
         status = 2
-    elif effective_aqi > 100.0:
+    elif score >= 1.0:
         status = 1
     return status
 
 
 def train_health_model() -> RandomForestClassifier:
     df = load_or_create_dataset()
-    df["congestion_level"] = df.apply(compute_congestion_level, axis=1)
     df["health_status"] = df.apply(compute_health_status, axis=1)
     feature_columns = [
         "temperature_c",
-        "humidity",
-        "wind_speed_kmh",
         "rainfall_mm",
-        "rainfall_last_12_months_mm",
         "aqi",
-        "congestion_level",
+        "recent_storm_or_flood",
+        "sewer_system_health",
+        "emergency_response_time",
     ]
     X = df[feature_columns]
     y = df["health_status"]
@@ -93,4 +90,3 @@ def train_health_model() -> RandomForestClassifier:
 
 if __name__ == "__main__":
     train_health_model()
-

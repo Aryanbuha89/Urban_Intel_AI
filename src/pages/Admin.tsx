@@ -77,17 +77,23 @@ const Admin = () => {
   const [whatIfLoadingTraffic, setWhatIfLoadingTraffic] = useState(false);
   const [whatIfLoadingFood, setWhatIfLoadingFood] = useState(false);
   const [whatIfLoadingEnergy, setWhatIfLoadingEnergy] = useState(false);
+  const [whatIfLoadingHealth, setWhatIfLoadingHealth] = useState(false);
+  const [whatIfLoadingPublicServices, setWhatIfLoadingPublicServices] = useState(false);
   const [whatIfError, setWhatIfError] = useState<string | null>(null);
   const [whatIfOutputs, setWhatIfOutputs] = useState<{
     waterShortageLevel: number | null;
     trafficCongestionLevel: number | null;
     foodPriceChangePercent: number | null;
     energyPriceChangePercent: number | null;
+    healthStatus: number | null;
+    publicCleanupNeeded: boolean | null;
   }>({
     waterShortageLevel: null,
     trafficCongestionLevel: null,
     foodPriceChangePercent: null,
     energyPriceChangePercent: null,
+    healthStatus: null,
+    publicCleanupNeeded: null,
   });
 
   const handleApprove = (option: PolicyOption) => {
@@ -201,6 +207,9 @@ const Admin = () => {
         typeof json.foodPriceChangePercent === 'number' ? json.foodPriceChangePercent : null,
       energyPriceChangePercent:
         typeof json.energyPriceChangePercent === 'number' ? json.energyPriceChangePercent : null,
+      healthStatus: typeof json.healthStatus === 'number' ? json.healthStatus : null,
+      publicCleanupNeeded:
+        typeof json.publicCleanupNeeded === 'boolean' ? json.publicCleanupNeeded : null,
     };
   };
 
@@ -221,6 +230,8 @@ const Admin = () => {
         trafficCongestionLevel: null,
         foodPriceChangePercent: null,
         energyPriceChangePercent: null,
+        healthStatus: null,
+        publicCleanupNeeded: null,
       });
     } finally {
       setWhatIfLoadingAll(false);
@@ -247,6 +258,8 @@ const Admin = () => {
         trafficCongestionLevel: null,
         foodPriceChangePercent: null,
         energyPriceChangePercent: null,
+        healthStatus: null,
+        publicCleanupNeeded: null,
       });
     } finally {
       setWhatIfLoadingWater(false);
@@ -273,6 +286,8 @@ const Admin = () => {
         trafficCongestionLevel: null,
         foodPriceChangePercent: null,
         energyPriceChangePercent: null,
+        healthStatus: null,
+        publicCleanupNeeded: null,
       });
     } finally {
       setWhatIfLoadingTraffic(false);
@@ -299,6 +314,8 @@ const Admin = () => {
         trafficCongestionLevel: null,
         foodPriceChangePercent: null,
         energyPriceChangePercent: null,
+        healthStatus: null,
+        publicCleanupNeeded: null,
       });
     } finally {
       setWhatIfLoadingFood(false);
@@ -325,9 +342,75 @@ const Admin = () => {
         trafficCongestionLevel: null,
         foodPriceChangePercent: null,
         energyPriceChangePercent: null,
+        healthStatus: null,
+        publicCleanupNeeded: null,
       });
     } finally {
       setWhatIfLoadingEnergy(false);
+    }
+  };
+
+  const handleRunHealthPrediction = async () => {
+    setWhatIfLoadingHealth(true);
+    setWhatIfError(null);
+    try {
+      setWhatIfOutputs(prev => ({
+        ...prev,
+        healthStatus: null,
+      }));
+      const outputs = await runWhatIfPrediction();
+      setWhatIfOutputs(prev => ({
+        ...prev,
+        healthStatus: outputs.healthStatus,
+      }));
+    } catch (error) {
+      setWhatIfError(
+        error instanceof Error
+          ? error.message
+          : 'Prediction request error. Please verify backend is running.'
+      );
+      setWhatIfOutputs({
+        waterShortageLevel: null,
+        trafficCongestionLevel: null,
+        foodPriceChangePercent: null,
+        energyPriceChangePercent: null,
+        healthStatus: null,
+        publicCleanupNeeded: null,
+      });
+    } finally {
+      setWhatIfLoadingHealth(false);
+    }
+  };
+
+  const handleRunPublicServicesPrediction = async () => {
+    setWhatIfLoadingPublicServices(true);
+    setWhatIfError(null);
+    try {
+      setWhatIfOutputs(prev => ({
+        ...prev,
+        publicCleanupNeeded: null,
+      }));
+      const outputs = await runWhatIfPrediction();
+      setWhatIfOutputs(prev => ({
+        ...prev,
+        publicCleanupNeeded: outputs.publicCleanupNeeded,
+      }));
+    } catch (error) {
+      setWhatIfError(
+        error instanceof Error
+          ? error.message
+          : 'Prediction request error. Please verify backend is running.'
+      );
+      setWhatIfOutputs({
+        waterShortageLevel: null,
+        trafficCongestionLevel: null,
+        foodPriceChangePercent: null,
+        energyPriceChangePercent: null,
+        healthStatus: null,
+        publicCleanupNeeded: null,
+      });
+    } finally {
+      setWhatIfLoadingPublicServices(false);
     }
   };
 
@@ -1053,6 +1136,54 @@ const Admin = () => {
                           disabled={whatIfLoadingEnergy}
                         >
                           {whatIfLoadingEnergy ? 'Running…' : 'Run energy price prediction'}
+                        </Button>
+                      </div>
+                      <div className="rounded-lg bg-destructive/5 p-3">
+                        <div className="text-xs font-semibold text-destructive uppercase tracking-wide">
+                          Health Status Model
+                        </div>
+                        <div className="mt-1 text-2xl font-bold">
+                          {whatIfOutputs.healthStatus !== null
+                            ? `Level ${Math.round(whatIfOutputs.healthStatus)}`
+                            : '—'}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          0=Excellent, 1=Moderate, 2=Poor, 3=Critical population health.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={handleRunHealthPrediction}
+                          disabled={whatIfLoadingHealth}
+                        >
+                          {whatIfLoadingHealth ? 'Running…' : 'Run health prediction'}
+                        </Button>
+                      </div>
+                      <div className="rounded-lg bg-info/5 p-3">
+                        <div className="text-xs font-semibold text-info uppercase tracking-wide">
+                          Public Cleanup Model
+                        </div>
+                        <div className="mt-1 text-2xl font-bold">
+                          {whatIfOutputs.publicCleanupNeeded === null
+                            ? '—'
+                            : whatIfOutputs.publicCleanupNeeded
+                            ? 'Cleanup Required'
+                            : 'No Cleanup Needed'}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Indicates whether major cleanup operations should be triggered.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={handleRunPublicServicesPrediction}
+                          disabled={whatIfLoadingPublicServices}
+                        >
+                          {whatIfLoadingPublicServices ? 'Running…' : 'Run cleanup prediction'}
                         </Button>
                       </div>
                     </div>

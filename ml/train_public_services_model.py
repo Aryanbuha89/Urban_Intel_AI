@@ -24,14 +24,17 @@ def load_or_create_dataset() -> pd.DataFrame:
 
 
 def compute_cleanup_needed(row: pd.Series) -> int:
-    # Primary driver: heavy rainfall or recent storm/flood
-    if row["rainfall_mm"] > 40.0 or row["recent_storm_or_flood"] == 1:
+    if row["recent_storm_or_flood"] == 1:
         return 1
-
-    # Secondary drivers to ensure enough positive examples in synthetic data
     if row["roads_needing_repair"] > 30:
         return 1
     if row["sewer_system_health"] < 75.0:
+        return 1
+    if row["water_supply_level"] < 40.0:
+        return 1
+    if row["emergency_response_time"] > 18.0:
+        return 1
+    if row["pending_maintenance_tasks"] > 40:
         return 1
 
     return 0
@@ -46,9 +49,7 @@ def train_public_services_model() -> RandomForestClassifier:
         "sewer_system_health",
         "emergency_response_time",
         "pending_maintenance_tasks",
-        "rainfall_mm",
-        "rainfall_last_12_months_mm",
-        "aqi",
+        "recent_storm_or_flood",
     ]
     X = df[feature_columns]
     y = df["cleanup_needed"]
