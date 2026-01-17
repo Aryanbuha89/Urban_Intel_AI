@@ -21,7 +21,7 @@ import { Progress } from '@/components/ui/progress';
 import { useCityContext } from '@/contexts/CityContext';
 
 const PredictionsPanel = () => {
-  const { predictions } = useCityContext();
+  const { predictions, backendMode, backendOutputs } = useCityContext();
 
   const container = {
     hidden: { opacity: 0 },
@@ -53,15 +53,30 @@ const PredictionsPanel = () => {
       animate="show"
       className="space-y-6"
     >
-      <div className="flex items-center gap-3 mb-6">
-        <div className="rounded-xl bg-gradient-to-br from-accent/20 to-primary/20 p-3">
-          <Brain className="h-6 w-6 text-accent" />
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-gradient-to-br from-accent/20 to-primary/20 p-3">
+            <Brain className="h-6 w-6 text-accent" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">AI Predictions</h2>
+            <p className="text-sm text-muted-foreground">
+              Cascading analysis based on injected government data
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">AI Predictions</h2>
-          <p className="text-sm text-muted-foreground">
-            Cascading analysis based on injected government data
-          </p>
+        <div className="flex flex-col items-end gap-1 text-xs">
+          <Badge
+            variant={backendMode === 'backend' ? 'default' : 'outline'}
+            className={backendMode === 'backend' ? 'bg-success text-success-foreground' : ''}
+          >
+            {backendMode === 'backend' ? 'Model backend active' : 'Mock rules only'}
+          </Badge>
+          {backendMode === 'backend' && backendOutputs && (
+            <span className="text-[10px] text-muted-foreground">
+              W:{Math.round(backendOutputs.waterShortageLevel)} T:{Math.round(backendOutputs.trafficCongestionLevel)} F:{Math.round(backendOutputs.foodPriceChangePercent)} E:{Math.round(backendOutputs.energyPriceChangePercent)} P:{backendOutputs.publicCleanupNeeded ? '1' : '0'} H:{backendOutputs.healthStatus}
+            </span>
+          )}
         </div>
       </div>
 

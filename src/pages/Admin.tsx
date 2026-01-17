@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Brain, Shield, Sparkles } from 'lucide-react';
+import { AlertTriangle, Brain, Shield, Sparkles } from 'lucide-react';
 import Header from '@/components/Header';
 import LoginForm from '@/components/LoginForm';
 import CrisisIndicator from '@/components/CrisisIndicator';
@@ -9,12 +9,17 @@ import DataDashboard from '@/components/admin/DataDashboard';
 import PredictionsPanel from '@/components/admin/PredictionsPanel';
 import ReportGenerator from '@/components/admin/ReportGenerator';
 import { useCityContext } from '@/contexts/CityContext';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { PolicyOption } from '@/lib/mockData';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 const Admin = () => {
   const {
+    data,
     isLoggedIn,
     currentCrisis,
     recommendations,
@@ -23,10 +28,307 @@ const Admin = () => {
   } = useCityContext();
 
   const [approvedOptionId, setApprovedOptionId] = useState<number | null>(null);
+  const [whatIfRainfallTotal, setWhatIfRainfallTotal] = useState<number>(() =>
+    data.weather.rainfallLast12Months.reduce((sum, value) => sum + value, 0)
+  );
+  const [whatIfForm, setWhatIfForm] = useState(() => ({
+    weather: {
+      currentTemperature: data.weather.currentTemperature,
+      humidity: data.weather.humidity,
+      windSpeed: data.weather.windSpeed,
+      currentRainfall: data.weather.currentRainfall,
+      recentStormOrFlood: data.weather.recentStormOrFlood,
+      aqi: data.weather.aqi,
+    },
+    transportation: {
+      busesOperating: data.transportation.busesOperating,
+      totalBuses: data.transportation.totalBuses,
+      avgVehiclesPerHour: data.transportation.avgVehiclesPerHour,
+      peakHourMultiplier: data.transportation.peakHourMultiplier,
+      congestedWest: data.transportation.busRoutesCongested.includes('west'),
+      congestedSouth: data.transportation.busRoutesCongested.includes('south'),
+      congestedEast: data.transportation.busRoutesCongested.includes('east'),
+      congestedNorth: data.transportation.busRoutesCongested.includes('north'),
+      congestedCentral: data.transportation.busRoutesCongested.includes('central'),
+    },
+    agriculture: {
+      cropYieldLastYear: data.agriculture.cropYieldLastYear,
+      currentStockLevel: data.agriculture.currentStockLevel,
+      supplyChainEfficiency: data.agriculture.supplyChainEfficiency,
+      importDependency: data.agriculture.importDependency,
+    },
+    energy: {
+      currentUsageMW: data.energy.currentUsageMW,
+      avgUsageLastYear: data.energy.avgUsageLastYear,
+      peakDemandMW: data.energy.peakDemandMW,
+      gridStability: data.energy.gridStability,
+      renewablePercentage: data.energy.renewablePercentage,
+    },
+    publicServices: {
+      roadsNeedingRepair: data.publicServices.roadsNeedingRepair,
+      waterSupplyLevel: data.publicServices.waterSupplyLevel,
+      sewerSystemHealth: data.publicServices.sewerSystemHealth,
+      emergencyResponseTime: data.publicServices.emergencyResponseTime,
+      pendingMaintenanceTasks: data.publicServices.pendingMaintenanceTasks,
+    },
+  }));
+  const [whatIfLoadingAll, setWhatIfLoadingAll] = useState(false);
+  const [whatIfLoadingWater, setWhatIfLoadingWater] = useState(false);
+  const [whatIfLoadingTraffic, setWhatIfLoadingTraffic] = useState(false);
+  const [whatIfLoadingFood, setWhatIfLoadingFood] = useState(false);
+  const [whatIfLoadingEnergy, setWhatIfLoadingEnergy] = useState(false);
+  const [whatIfError, setWhatIfError] = useState<string | null>(null);
+  const [whatIfOutputs, setWhatIfOutputs] = useState<{
+    waterShortageLevel: number | null;
+    trafficCongestionLevel: number | null;
+    foodPriceChangePercent: number | null;
+    energyPriceChangePercent: number | null;
+  }>({
+    waterShortageLevel: null,
+    trafficCongestionLevel: null,
+    foodPriceChangePercent: null,
+    energyPriceChangePercent: null,
+  });
 
   const handleApprove = (option: PolicyOption) => {
     approveRecommendation(option);
     setApprovedOptionId(option.id);
+  };
+
+  const whatIfRainfallAverage = useMemo(() => {
+    if (whatIfRainfallTotal <= 0) {
+      return 0;
+    }
+    return Math.round((whatIfRainfallTotal / 12) * 10) / 10;
+  }, [whatIfRainfallTotal]);
+
+  const getApiBaseUrl = () => {
+    const url = import.meta.env.VITE_API_BASE_URL as string | undefined;
+    if (url && url.trim().length > 0) {
+      return url;
+    }
+    return 'http://localhost:8000';
+  };
+
+  const handleWhatIfChange =
+    <
+      TSection extends keyof typeof whatIfForm,
+      TField extends keyof (typeof whatIfForm)[TSection]
+    >(
+      section: TSection,
+      field: TField
+    ) =>
+    (value: string | boolean) => {
+      setWhatIfForm(prev => ({
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [field]: value,
+        },
+      }));
+    };
+
+  const runWhatIfPrediction = async () => {
+    const rainfallLast12Months =
+      whatIfRainfallTotal > 0
+        ? Array.from({ length: 12 }, () => whatIfRainfallTotal / 12)
+        : Array.from({ length: 12 }, () => 0);
+
+    const busRoutesCongested: string[] = [];
+    if (whatIfForm.transportation.congestedWest) busRoutesCongested.push('west');
+    if (whatIfForm.transportation.congestedSouth) busRoutesCongested.push('south');
+    if (whatIfForm.transportation.congestedEast) busRoutesCongested.push('east');
+    if (whatIfForm.transportation.congestedNorth) busRoutesCongested.push('north');
+    if (whatIfForm.transportation.congestedCentral) busRoutesCongested.push('central');
+
+    const payload = {
+      weather: {
+        currentTemperature: Number(whatIfForm.weather.currentTemperature),
+        humidity: Number(whatIfForm.weather.humidity),
+        windSpeed: Number(whatIfForm.weather.windSpeed),
+        currentRainfall: Number(whatIfForm.weather.currentRainfall),
+        rainfallLast12Months,
+        recentStormOrFlood: Boolean(whatIfForm.weather.recentStormOrFlood),
+        aqi: Number(whatIfForm.weather.aqi),
+      },
+      transportation: {
+        busesOperating: Number(whatIfForm.transportation.busesOperating),
+        totalBuses: Number(whatIfForm.transportation.totalBuses),
+        busRoutesCongested,
+        avgVehiclesPerHour: Number(whatIfForm.transportation.avgVehiclesPerHour),
+        peakHourMultiplier: Number(whatIfForm.transportation.peakHourMultiplier),
+      },
+      agriculture: {
+        cropYieldLastYear: Number(whatIfForm.agriculture.cropYieldLastYear),
+        currentStockLevel: Number(whatIfForm.agriculture.currentStockLevel),
+        supplyChainEfficiency: Number(whatIfForm.agriculture.supplyChainEfficiency),
+        importDependency: Number(whatIfForm.agriculture.importDependency),
+      },
+      energy: {
+        currentUsageMW: Number(whatIfForm.energy.currentUsageMW),
+        avgUsageLastYear: Number(whatIfForm.energy.avgUsageLastYear),
+        peakDemandMW: Number(whatIfForm.energy.peakDemandMW),
+        gridStability: Number(whatIfForm.energy.gridStability),
+        renewablePercentage: Number(whatIfForm.energy.renewablePercentage),
+      },
+      publicServices: {
+        roadsNeedingRepair: Number(whatIfForm.publicServices.roadsNeedingRepair),
+        waterSupplyLevel: Number(whatIfForm.publicServices.waterSupplyLevel),
+        sewerSystemHealth: Number(whatIfForm.publicServices.sewerSystemHealth),
+        emergencyResponseTime: Number(whatIfForm.publicServices.emergencyResponseTime),
+        pendingMaintenanceTasks: Number(whatIfForm.publicServices.pendingMaintenanceTasks),
+      },
+    };
+
+    const response = await fetch(`${getApiBaseUrl()}/predict-all`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Prediction request failed (${response.status})`);
+    }
+
+    const json = await response.json();
+    return {
+      waterShortageLevel: typeof json.waterShortageLevel === 'number' ? json.waterShortageLevel : null,
+      trafficCongestionLevel:
+        typeof json.trafficCongestionLevel === 'number' ? json.trafficCongestionLevel : null,
+      foodPriceChangePercent:
+        typeof json.foodPriceChangePercent === 'number' ? json.foodPriceChangePercent : null,
+      energyPriceChangePercent:
+        typeof json.energyPriceChangePercent === 'number' ? json.energyPriceChangePercent : null,
+    };
+  };
+
+  const handleRunWhatIfAll = async () => {
+    setWhatIfLoadingAll(true);
+    setWhatIfError(null);
+    try {
+      const outputs = await runWhatIfPrediction();
+      setWhatIfOutputs(outputs);
+    } catch (error) {
+      setWhatIfError(
+        error instanceof Error
+          ? error.message
+          : 'Prediction request error. Please verify backend is running.'
+      );
+      setWhatIfOutputs({
+        waterShortageLevel: null,
+        trafficCongestionLevel: null,
+        foodPriceChangePercent: null,
+        energyPriceChangePercent: null,
+      });
+    } finally {
+      setWhatIfLoadingAll(false);
+    }
+  };
+
+  const handleRunWaterPrediction = async () => {
+    setWhatIfLoadingWater(true);
+    setWhatIfError(null);
+    try {
+      const outputs = await runWhatIfPrediction();
+      setWhatIfOutputs(prev => ({
+        ...prev,
+        waterShortageLevel: outputs.waterShortageLevel,
+      }));
+    } catch (error) {
+      setWhatIfError(
+        error instanceof Error
+          ? error.message
+          : 'Prediction request error. Please verify backend is running.'
+      );
+      setWhatIfOutputs({
+        waterShortageLevel: null,
+        trafficCongestionLevel: null,
+        foodPriceChangePercent: null,
+        energyPriceChangePercent: null,
+      });
+    } finally {
+      setWhatIfLoadingWater(false);
+    }
+  };
+
+  const handleRunTrafficPrediction = async () => {
+    setWhatIfLoadingTraffic(true);
+    setWhatIfError(null);
+    try {
+      const outputs = await runWhatIfPrediction();
+      setWhatIfOutputs(prev => ({
+        ...prev,
+        trafficCongestionLevel: outputs.trafficCongestionLevel,
+      }));
+    } catch (error) {
+      setWhatIfError(
+        error instanceof Error
+          ? error.message
+          : 'Prediction request error. Please verify backend is running.'
+      );
+      setWhatIfOutputs({
+        waterShortageLevel: null,
+        trafficCongestionLevel: null,
+        foodPriceChangePercent: null,
+        energyPriceChangePercent: null,
+      });
+    } finally {
+      setWhatIfLoadingTraffic(false);
+    }
+  };
+
+  const handleRunFoodPrediction = async () => {
+    setWhatIfLoadingFood(true);
+    setWhatIfError(null);
+    try {
+      const outputs = await runWhatIfPrediction();
+      setWhatIfOutputs(prev => ({
+        ...prev,
+        foodPriceChangePercent: outputs.foodPriceChangePercent,
+      }));
+    } catch (error) {
+      setWhatIfError(
+        error instanceof Error
+          ? error.message
+          : 'Prediction request error. Please verify backend is running.'
+      );
+      setWhatIfOutputs({
+        waterShortageLevel: null,
+        trafficCongestionLevel: null,
+        foodPriceChangePercent: null,
+        energyPriceChangePercent: null,
+      });
+    } finally {
+      setWhatIfLoadingFood(false);
+    }
+  };
+
+  const handleRunEnergyPrediction = async () => {
+    setWhatIfLoadingEnergy(true);
+    setWhatIfError(null);
+    try {
+      const outputs = await runWhatIfPrediction();
+      setWhatIfOutputs(prev => ({
+        ...prev,
+        energyPriceChangePercent: outputs.energyPriceChangePercent,
+      }));
+    } catch (error) {
+      setWhatIfError(
+        error instanceof Error
+          ? error.message
+          : 'Prediction request error. Please verify backend is running.'
+      );
+      setWhatIfOutputs({
+        waterShortageLevel: null,
+        trafficCongestionLevel: null,
+        foodPriceChangePercent: null,
+        energyPriceChangePercent: null,
+      });
+    } finally {
+      setWhatIfLoadingEnergy(false);
+    }
   };
 
   if (!isLoggedIn) {
@@ -71,7 +373,7 @@ const Admin = () => {
 
         {/* Main Tabs */}
         <Tabs defaultValue="data" className="mb-12">
-          <TabsList className="grid w-full grid-cols-3 mb-6 h-14 p-2 bg-gradient-to-r from-muted/50 to-muted/30 rounded-xl border-3 border-primary/40 shadow-lg">
+          <TabsList className="grid w-full grid-cols-4 mb-6 h-14 p-2 bg-gradient-to-r from-muted/50 to-muted/30 rounded-xl border-3 border-primary/40 shadow-lg">
             <TabsTrigger
               value="data"
               className="border-2 border-transparent data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/20 data-[state=active]:to-accent/20 data-[state=active]:border-primary data-[state=active]:shadow-lg data-[state=active]:font-bold transition-all duration-200"
@@ -89,6 +391,12 @@ const Admin = () => {
               className="border-2 border-transparent data-[state=active]:bg-gradient-to-r data-[state=active]:from-success/20 data-[state=active]:to-primary/20 data-[state=active]:border-success data-[state=active]:shadow-lg data-[state=active]:font-bold transition-all duration-200"
             >
               ✅ Recommendations
+            </TabsTrigger>
+            <TabsTrigger
+              value="what-if"
+              className="border-2 border-transparent data-[state=active]:bg-gradient-to-r data-[state=active]:from-warning/20 data-[state=active]:to-accent/20 data-[state=active]:border-warning data-[state=active]:shadow-lg data-[state=active]:font-bold transition-all duration-200"
+            >
+              ❓ What If?
             </TabsTrigger>
           </TabsList>
 
@@ -139,6 +447,617 @@ const Admin = () => {
               {/* Report Generator */}
               <div className="mt-8">
                 <ReportGenerator />
+              </div>
+            </motion.div>
+          </TabsContent>
+
+          <TabsContent value="what-if">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-6"
+            >
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-warning/20 to-accent/20 p-3">
+                  <AlertTriangle className="h-6 w-6 text-warning" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">What If? Scenario Testing</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Manually enter government data and run the live ML models to verify outputs.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Judges can confirm the models are running by changing inputs and observing predictions.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+                <Card className="border-l-4 border-l-warning">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Manual Government Data Input</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-foreground">Weather</h3>
+                        <div className="space-y-2">
+                          <div>
+                            <Label htmlFor="whatif-temp">Current temperature (°C)</Label>
+                            <Input
+                              id="whatif-temp"
+                              type="number"
+                              min={-10}
+                              max={50}
+                              value={whatIfForm.weather.currentTemperature}
+                              onChange={e => handleWhatIfChange('weather', 'currentTemperature')(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-humidity">Humidity (%)</Label>
+                            <Input
+                              id="whatif-humidity"
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={whatIfForm.weather.humidity}
+                              onChange={e => handleWhatIfChange('weather', 'humidity')(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-wind">Wind speed (km/h)</Label>
+                            <Input
+                              id="whatif-wind"
+                              type="number"
+                              min={0}
+                              max={60}
+                              value={whatIfForm.weather.windSpeed}
+                              onChange={e => handleWhatIfChange('weather', 'windSpeed')(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-rain">Current rainfall (mm)</Label>
+                            <Input
+                              id="whatif-rain"
+                              type="number"
+                              min={0}
+                              max={200}
+                              value={whatIfForm.weather.currentRainfall}
+                              onChange={e => handleWhatIfChange('weather', 'currentRainfall')(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-rain-total">Rainfall last 12 months (mm total)</Label>
+                            <Input
+                              id="whatif-rain-total"
+                              type="number"
+                              min={0}
+                              max={3000}
+                              value={whatIfRainfallTotal}
+                              onChange={e => setWhatIfRainfallTotal(Number(e.target.value) || 0)}
+                            />
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Average per month used for model: {whatIfRainfallAverage} mm
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              id="whatif-storm"
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-input"
+                              checked={whatIfForm.weather.recentStormOrFlood}
+                              onChange={e =>
+                                handleWhatIfChange('weather', 'recentStormOrFlood')(e.target.checked)
+                              }
+                            />
+                            <Label htmlFor="whatif-storm">Recent storm or flood</Label>
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-aqi">Air Quality Index (AQI)</Label>
+                            <Input
+                              id="whatif-aqi"
+                              type="number"
+                              min={0}
+                              max={500}
+                              value={whatIfForm.weather.aqi}
+                              onChange={e => handleWhatIfChange('weather', 'aqi')(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-foreground">Transportation</h3>
+                        <div className="space-y-2">
+                          <div>
+                            <Label htmlFor="whatif-buses-operating">Buses operating</Label>
+                            <Input
+                              id="whatif-buses-operating"
+                              type="number"
+                              min={120}
+                              max={280}
+                              value={whatIfForm.transportation.busesOperating}
+                              onChange={e =>
+                                handleWhatIfChange('transportation', 'busesOperating')(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-total-buses">Total buses</Label>
+                            <Input
+                              id="whatif-total-buses"
+                              type="number"
+                              value={whatIfForm.transportation.totalBuses}
+                              onChange={e =>
+                                handleWhatIfChange('transportation', 'totalBuses')(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-vehicles">Average vehicles per hour</Label>
+                            <Input
+                              id="whatif-vehicles"
+                              type="number"
+                              min={3000}
+                              max={9000}
+                              value={whatIfForm.transportation.avgVehiclesPerHour}
+                              onChange={e =>
+                                handleWhatIfChange(
+                                  'transportation',
+                                  'avgVehiclesPerHour'
+                                )(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-peak-multiplier">Peak hour multiplier</Label>
+                            <Input
+                              id="whatif-peak-multiplier"
+                              type="number"
+                              step="0.1"
+                              min={1.2}
+                              max={2.2}
+                              value={whatIfForm.transportation.peakHourMultiplier}
+                              onChange={e =>
+                                handleWhatIfChange(
+                                  'transportation',
+                                  'peakHourMultiplier'
+                                )(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Congested routes</Label>
+                            <div className="grid grid-cols-2 gap-1 text-xs">
+                              <label className="flex items-center gap-1">
+                                <input
+                                  type="checkbox"
+                                  className="h-3 w-3 rounded border-input"
+                                  checked={whatIfForm.transportation.congestedWest}
+                                  onChange={e =>
+                                    handleWhatIfChange(
+                                      'transportation',
+                                      'congestedWest'
+                                    )(e.target.checked)
+                                  }
+                                />
+                                <span>West</span>
+                              </label>
+                              <label className="flex items-center gap-1">
+                                <input
+                                  type="checkbox"
+                                  className="h-3 w-3 rounded border-input"
+                                  checked={whatIfForm.transportation.congestedSouth}
+                                  onChange={e =>
+                                    handleWhatIfChange(
+                                      'transportation',
+                                      'congestedSouth'
+                                    )(e.target.checked)
+                                  }
+                                />
+                                <span>South</span>
+                              </label>
+                              <label className="flex items-center gap-1">
+                                <input
+                                  type="checkbox"
+                                  className="h-3 w-3 rounded border-input"
+                                  checked={whatIfForm.transportation.congestedEast}
+                                  onChange={e =>
+                                    handleWhatIfChange(
+                                      'transportation',
+                                      'congestedEast'
+                                    )(e.target.checked)
+                                  }
+                                />
+                                <span>East</span>
+                              </label>
+                              <label className="flex items-center gap-1">
+                                <input
+                                  type="checkbox"
+                                  className="h-3 w-3 rounded border-input"
+                                  checked={whatIfForm.transportation.congestedNorth}
+                                  onChange={e =>
+                                    handleWhatIfChange(
+                                      'transportation',
+                                      'congestedNorth'
+                                    )(e.target.checked)
+                                  }
+                                />
+                                <span>North</span>
+                              </label>
+                              <label className="flex items-center gap-1">
+                                <input
+                                  type="checkbox"
+                                  className="h-3 w-3 rounded border-input"
+                                  checked={whatIfForm.transportation.congestedCentral}
+                                  onChange={e =>
+                                    handleWhatIfChange(
+                                      'transportation',
+                                      'congestedCentral'
+                                    )(e.target.checked)
+                                  }
+                                />
+                                <span>Central</span>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-foreground">Agriculture</h3>
+                        <div className="space-y-2">
+                          <div>
+                            <Label htmlFor="whatif-crop-yield">Crop yield last year (% of normal)</Label>
+                            <Input
+                              id="whatif-crop-yield"
+                              type="number"
+                              min={50}
+                              max={110}
+                              value={whatIfForm.agriculture.cropYieldLastYear}
+                              onChange={e =>
+                                handleWhatIfChange('agriculture', 'cropYieldLastYear')(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-stock-level">Current stock level (% of reserves)</Label>
+                            <Input
+                              id="whatif-stock-level"
+                              type="number"
+                              min={20}
+                              max={100}
+                              value={whatIfForm.agriculture.currentStockLevel}
+                              onChange={e =>
+                                handleWhatIfChange('agriculture', 'currentStockLevel')(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-supply-efficiency">Supply chain efficiency (%)</Label>
+                            <Input
+                              id="whatif-supply-efficiency"
+                              type="number"
+                              min={50}
+                              max={100}
+                              value={whatIfForm.agriculture.supplyChainEfficiency}
+                              onChange={e =>
+                                handleWhatIfChange(
+                                  'agriculture',
+                                  'supplyChainEfficiency'
+                                )(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-import-dependency">Import dependency (%)</Label>
+                            <Input
+                              id="whatif-import-dependency"
+                              type="number"
+                              min={5}
+                              max={40}
+                              value={whatIfForm.agriculture.importDependency}
+                              onChange={e =>
+                                handleWhatIfChange('agriculture', 'importDependency')(e.target.value)
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-foreground">Energy</h3>
+                        <div className="space-y-2">
+                          <div>
+                            <Label htmlFor="whatif-current-usage">Current usage (MW)</Label>
+                            <Input
+                              id="whatif-current-usage"
+                              type="number"
+                              min={600}
+                              max={1300}
+                              value={whatIfForm.energy.currentUsageMW}
+                              onChange={e =>
+                                handleWhatIfChange('energy', 'currentUsageMW')(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-avg-usage">Average usage last year (MW)</Label>
+                            <Input
+                              id="whatif-avg-usage"
+                              type="number"
+                              min={700}
+                              max={1100}
+                              value={whatIfForm.energy.avgUsageLastYear}
+                              onChange={e =>
+                                handleWhatIfChange('energy', 'avgUsageLastYear')(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-peak-demand">Peak demand (MW)</Label>
+                            <Input
+                              id="whatif-peak-demand"
+                              type="number"
+                              min={900}
+                              max={1500}
+                              value={whatIfForm.energy.peakDemandMW}
+                              onChange={e =>
+                                handleWhatIfChange('energy', 'peakDemandMW')(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-grid-stability">Grid stability (%)</Label>
+                            <Input
+                              id="whatif-grid-stability"
+                              type="number"
+                              min={75}
+                              max={100}
+                              value={whatIfForm.energy.gridStability}
+                              onChange={e =>
+                                handleWhatIfChange('energy', 'gridStability')(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-renewable">Renewable percentage (%)</Label>
+                            <Input
+                              id="whatif-renewable"
+                              type="number"
+                              min={10}
+                              max={40}
+                              value={whatIfForm.energy.renewablePercentage}
+                              onChange={e =>
+                                handleWhatIfChange('energy', 'renewablePercentage')(e.target.value)
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-foreground">Public Services</h3>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <div>
+                            <Label htmlFor="whatif-roads-repair">Roads needing repair</Label>
+                            <Input
+                              id="whatif-roads-repair"
+                              type="number"
+                              min={5}
+                              max={50}
+                              value={whatIfForm.publicServices.roadsNeedingRepair}
+                              onChange={e =>
+                                handleWhatIfChange(
+                                  'publicServices',
+                                  'roadsNeedingRepair'
+                                )(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-water-supply">Water supply level (%)</Label>
+                            <Input
+                              id="whatif-water-supply"
+                              type="number"
+                              min={20}
+                              max={100}
+                              value={whatIfForm.publicServices.waterSupplyLevel}
+                              onChange={e =>
+                                handleWhatIfChange(
+                                  'publicServices',
+                                  'waterSupplyLevel'
+                                )(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-sewer-health">Sewer system health (%)</Label>
+                            <Input
+                              id="whatif-sewer-health"
+                              type="number"
+                              min={60}
+                              max={100}
+                              value={whatIfForm.publicServices.sewerSystemHealth}
+                              onChange={e =>
+                                handleWhatIfChange(
+                                  'publicServices',
+                                  'sewerSystemHealth'
+                                )(e.target.value)
+                              }
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div>
+                            <Label htmlFor="whatif-response-time">Emergency response time (minutes)</Label>
+                            <Input
+                              id="whatif-response-time"
+                              type="number"
+                              min={5}
+                              max={25}
+                              value={whatIfForm.publicServices.emergencyResponseTime}
+                              onChange={e =>
+                                handleWhatIfChange(
+                                  'publicServices',
+                                  'emergencyResponseTime'
+                                )(e.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="whatif-maintenance-tasks">Pending maintenance tasks</Label>
+                            <Input
+                              id="whatif-maintenance-tasks"
+                              type="number"
+                              min={10}
+                              max={70}
+                              value={whatIfForm.publicServices.pendingMaintenanceTasks}
+                              onChange={e =>
+                                handleWhatIfChange(
+                                  'publicServices',
+                                  'pendingMaintenanceTasks'
+                                )(e.target.value)
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                      <Button
+                        type="button"
+                        onClick={handleRunWhatIfAll}
+                        disabled={whatIfLoadingAll}
+                        className="rounded-xl px-6"
+                      >
+                        {whatIfLoadingAll ? 'Running predictions…' : 'Run What If Predictions'}
+                      </Button>
+                      {whatIfError && (
+                        <p className="text-sm text-destructive">
+                          {whatIfError}
+                        </p>
+                      )}
+                      {!whatIfError && !whatIfLoadingAll && whatIfOutputs.waterShortageLevel !== null && (
+                        <p className="text-xs text-muted-foreground">
+                          Models executed successfully using the manual inputs above.
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-info h-fit">
+                  <CardHeader>
+                    <CardTitle className="text-lg">What If? Model Outputs</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      These values come directly from the trained ML models, using the manual data
+                      you entered. Judges can change inputs and rerun predictions to confirm live
+                      model behavior.
+                    </p>
+                    <div className="space-y-3">
+                      <div className="rounded-lg bg-primary/5 p-3">
+                        <div className="text-xs font-semibold text-primary uppercase tracking-wide">
+                          Water Shortage Model
+                        </div>
+                        <div className="mt-1 text-2xl font-bold">
+                          {whatIfOutputs.waterShortageLevel !== null
+                            ? `${Math.round(whatIfOutputs.waterShortageLevel)}%`
+                            : '—'}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Higher value means more severe shortage risk.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={handleRunWaterPrediction}
+                          disabled={whatIfLoadingWater}
+                        >
+                          {whatIfLoadingWater ? 'Running…' : 'Run water prediction'}
+                        </Button>
+                      </div>
+                      <div className="rounded-lg bg-accent/5 p-3">
+                        <div className="text-xs font-semibold text-accent uppercase tracking-wide">
+                          Traffic Congestion Model
+                        </div>
+                        <div className="mt-1 text-2xl font-bold">
+                          {whatIfOutputs.trafficCongestionLevel !== null
+                            ? `${Math.round(whatIfOutputs.trafficCongestionLevel)}%`
+                            : '—'}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Predicted citywide congestion level based on weather and transport load.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={handleRunTrafficPrediction}
+                          disabled={whatIfLoadingTraffic}
+                        >
+                          {whatIfLoadingTraffic ? 'Running…' : 'Run traffic prediction'}
+                        </Button>
+                      </div>
+                      <div className="rounded-lg bg-warning/5 p-3">
+                        <div className="text-xs font-semibold text-warning uppercase tracking-wide">
+                          Food Price Model
+                        </div>
+                        <div className="mt-1 text-2xl font-bold">
+                          {whatIfOutputs.foodPriceChangePercent !== null
+                            ? `${Math.round(whatIfOutputs.foodPriceChangePercent)}%`
+                            : '—'}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Expected change in food prices given rainfall, stocks and logistics.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={handleRunFoodPrediction}
+                          disabled={whatIfLoadingFood}
+                        >
+                          {whatIfLoadingFood ? 'Running…' : 'Run food price prediction'}
+                        </Button>
+                      </div>
+                      <div className="rounded-lg bg-success/5 p-3">
+                        <div className="text-xs font-semibold text-success uppercase tracking-wide">
+                          Energy Price Model
+                        </div>
+                        <div className="mt-1 text-2xl font-bold">
+                          {whatIfOutputs.energyPriceChangePercent !== null
+                            ? `${Math.round(whatIfOutputs.energyPriceChangePercent)}%`
+                            : '—'}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Predicted adjustment in energy tariffs from current load and stability.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={handleRunEnergyPrediction}
+                          disabled={whatIfLoadingEnergy}
+                        >
+                          {whatIfLoadingEnergy ? 'Running…' : 'Run energy price prediction'}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </motion.div>
           </TabsContent>
