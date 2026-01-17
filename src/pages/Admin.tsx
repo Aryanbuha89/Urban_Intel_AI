@@ -14,14 +14,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { PolicyOption } from '@/lib/mockData';
 
 const Admin = () => {
-  const { 
-    isLoggedIn, 
-    currentCrisis, 
-    recommendations, 
+  const {
+    isLoggedIn,
+    currentCrisis,
+    recommendations,
     decisionHistory,
-    approveRecommendation 
+    approveRecommendation
   } = useCityContext();
-  
+
   const [approvedOptionId, setApprovedOptionId] = useState<number | null>(null);
 
   const handleApprove = (option: PolicyOption) => {
@@ -41,7 +41,7 @@ const Admin = () => {
   return (
     <div className="min-h-screen gradient-hero">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8">
         {/* Header */}
         <motion.section
@@ -98,6 +98,9 @@ const Admin = () => {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-foreground">Final AI Recommendations</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Welcome to the Urban Intel AI control center. Monitor and verify system data below.
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     <Sparkles className="mr-1 inline h-4 w-4 text-warning" />
                     Based on cascading analysis from all data sources

@@ -80,47 +80,7 @@ const PredictionsPanel = () => {
       </motion.div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Water Supply Prediction */}
-        <motion.div variants={item}>
-          <Card className={`h-full ${predictions.waterSupply.status === 'critical' || predictions.waterSupply.status === 'shortage' ? 'border-warning border-2' : ''}`}>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-lg">
-                  <Droplets className="h-5 w-5 text-info" />
-                  Water Supply Prediction
-                </div>
-                <Badge className={getStatusColor(predictions.waterSupply.status)}>
-                  {predictions.waterSupply.status.toUpperCase()}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Shortage Risk Level</span>
-                  <span className="font-bold">{predictions.waterSupply.shortageLevel}%</span>
-                </div>
-                <Progress value={predictions.waterSupply.shortageLevel} className="h-3" />
-              </div>
-              {predictions.waterSupply.shortageDuration !== 'N/A' && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-warning/10">
-                  <Clock className="h-5 w-5 text-warning" />
-                  <div>
-                    <p className="text-sm font-medium">Expected Duration</p>
-                    <p className="text-lg font-bold text-warning">{predictions.waterSupply.shortageDuration}</p>
-                  </div>
-                </div>
-              )}
-              <p className="text-sm text-muted-foreground">{predictions.waterSupply.reason}</p>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <CheckCircle className="h-3 w-3" />
-                Confidence: {predictions.waterSupply.confidence}%
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Traffic Prediction */}
+        {/* Row 1: Traffic Prediction */}
         <motion.div variants={item}>
           <Card className={`h-full ${predictions.traffic.congestionLevel > 70 ? 'border-warning border-2' : ''}`}>
             <CardHeader className="pb-3">
@@ -177,7 +137,64 @@ const PredictionsPanel = () => {
           </Card>
         </motion.div>
 
-        {/* Food Price Prediction */}
+        {/* Row 1: Health Prediction */}
+        <motion.div variants={item}>
+          <Card className={`h-full ${predictions.health.status === 'hazardous' ? 'border-destructive border-2' : predictions.health.status === 'unhealthy' ? 'border-warning border-2' : ''}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-lg">
+                  <Activity className="h-5 w-5 text-destructive" />
+                  Health & Safety Prediction
+                </div>
+                <Badge className={
+                  predictions.health.status === 'hazardous' ? 'bg-destructive text-destructive-foreground' :
+                    predictions.health.status === 'unhealthy' ? 'bg-warning text-warning-foreground' :
+                      predictions.health.status === 'moderate' ? 'bg-secondary text-secondary-foreground' :
+                        'bg-success text-success-foreground'
+                }>
+                  AQI: {predictions.health.aqi}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-3 rounded-lg bg-muted/50">
+                <p className="text-sm font-medium mb-1">Risk Assessment</p>
+                <p className="text-sm text-muted-foreground line-clamp-2">{predictions.health.healthRisk}</p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Mandates</p>
+                <div className="flex flex-wrap gap-2">
+                  {predictions.health.recommendations.schoolHoliday && (
+                    <Badge variant="destructive" className="flex gap-1 items-center px-2 py-0.5 text-[10px]">
+                      <Ban className="h-3 w-3" /> Schools Closed
+                    </Badge>
+                  )}
+                  {predictions.health.recommendations.oddEvenScheme && (
+                    <Badge variant="destructive" className="flex gap-1 items-center px-2 py-0.5 text-[10px]">
+                      <Car className="h-3 w-3" /> Odd-Even
+                    </Badge>
+                  )}
+                  {predictions.health.recommendations.maskMandate && (
+                    <Badge className="bg-warning text-warning-foreground flex gap-1 items-center px-2 py-0.5 text-[10px]">
+                      <ShieldAlert className="h-3 w-3" /> Masks
+                    </Badge>
+                  )}
+                  {!predictions.health.recommendations.schoolHoliday && !predictions.health.recommendations.oddEvenScheme && !predictions.health.recommendations.maskMandate && (
+                    <Badge variant="outline" className="text-muted-foreground px-2 py-0.5 text-[10px]">Normal</Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-auto">
+                <CheckCircle className="h-3 w-3" />
+                Confidence: {predictions.health?.confidence || 85}%
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Row 2: Food Price Prediction */}
         <motion.div variants={item}>
           <Card className={`h-full ${predictions.foodPrice.priceChangePercent > 15 ? 'border-destructive border-2' : ''}`}>
             <CardHeader className="pb-3">
@@ -220,7 +237,7 @@ const PredictionsPanel = () => {
 
               <div className="text-sm">
                 <p><strong>Timeline:</strong> {predictions.foodPrice.timeline}</p>
-                <p className="text-muted-foreground mt-2">{predictions.foodPrice.reason}</p>
+                <p className="text-muted-foreground mt-2 line-clamp-1">{predictions.foodPrice.reason}</p>
               </div>
 
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -231,7 +248,7 @@ const PredictionsPanel = () => {
           </Card>
         </motion.div>
 
-        {/* Energy Price Prediction */}
+        {/* Row 2: Energy Price Prediction */}
         <motion.div variants={item}>
           <Card className={`h-full ${predictions.energyPrice.priceChangePercent > 10 ? 'border-accent border-2' : ''}`}>
             <CardHeader className="pb-3">
@@ -253,18 +270,18 @@ const PredictionsPanel = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 rounded-lg bg-muted/50 text-center">
-                  <p className="text-xs text-muted-foreground">Current Rate</p>
-                  <p className="text-xl font-bold">₹{predictions.energyPrice.currentRate}/unit</p>
+                  <p className="text-xs text-muted-foreground">Current</p>
+                  <p className="text-xl font-bold">₹{predictions.energyPrice.currentRate}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-accent/10 text-center">
-                  <p className="text-xs text-muted-foreground">Predicted Rate</p>
-                  <p className="text-xl font-bold text-accent">₹{predictions.energyPrice.predictedRate}/unit</p>
+                  <p className="text-xs text-muted-foreground">Predicted</p>
+                  <p className="text-xl font-bold text-accent">₹{predictions.energyPrice.predictedRate}</p>
                 </div>
               </div>
 
               <div className="text-sm">
                 <p><strong>Timeline:</strong> {predictions.energyPrice.timeline}</p>
-                <p className="text-muted-foreground mt-2">{predictions.energyPrice.reason}</p>
+                <p className="text-muted-foreground mt-2 line-clamp-1">{predictions.energyPrice.reason}</p>
               </div>
 
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -275,50 +292,35 @@ const PredictionsPanel = () => {
           </Card>
         </motion.div>
 
-        {/* Public Services Prediction */}
-        <motion.div variants={item} className="md:col-span-2">
-          <Card className={`${predictions.publicServices.cleanupNeeded ? 'border-primary border-2' : ''}`}>
+        {/* Row 3: Public Services Prediction */}
+        <motion.div variants={item}>
+          <Card className={`h-full ${predictions.publicServices.cleanupNeeded ? 'border-primary border-2' : ''}`}>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-lg">
                   <Construction className="h-5 w-5 text-primary" />
-                  Public Services Prediction
+                  Public Services
                 </div>
                 {predictions.publicServices.cleanupNeeded && (
                   <Badge className="bg-primary text-primary-foreground">
-                    Cleanup Required
+                    Cleanup
                   </Badge>
                 )}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg bg-muted/50">
-                  <p className="text-sm font-medium mb-2">Road Maintenance Plan</p>
-                  <p className="text-sm text-muted-foreground">{predictions.publicServices.roadMaintenancePlan}</p>
-                  <p className="text-sm mt-2">
-                    <strong>Timeline:</strong> {predictions.publicServices.maintenanceTimeline}
-                  </p>
-                </div>
-
-                {predictions.publicServices.cleanupNeeded && (
-                  <div className="p-4 rounded-lg bg-primary/10">
-                    <p className="text-sm font-medium text-primary mb-2">Storm/Flood Recovery</p>
-                    <p className="text-sm text-muted-foreground">{predictions.publicServices.cleanupReason}</p>
-                    <p className="text-sm mt-2">
-                      <strong>Duration:</strong> {predictions.publicServices.cleanupDuration}
-                    </p>
-                  </div>
-                )}
+              <div className="p-3 rounded-lg bg-muted/50">
+                <p className="text-sm font-medium mb-1">Maintenance Plan</p>
+                <p className="text-sm text-muted-foreground line-clamp-2">{predictions.publicServices.roadMaintenancePlan}</p>
               </div>
 
               <div>
-                <p className="text-sm font-medium mb-2">Planned Improvements</p>
+                <p className="text-sm font-medium mb-2"> improvements</p>
                 <div className="flex flex-wrap gap-2">
-                  {predictions.publicServices.qualityImprovements.map((improvement) => (
+                  {predictions.publicServices.qualityImprovements.slice(0, 3).map((improvement) => (
                     <span
                       key={improvement}
-                      className="px-3 py-1 text-sm rounded-full bg-success/20 text-success"
+                      className="px-2 py-1 text-xs rounded-full bg-success/20 text-success"
                     >
                       {improvement}
                     </span>
@@ -334,69 +336,36 @@ const PredictionsPanel = () => {
           </Card>
         </motion.div>
 
-
-        {/* Health Prediction */}
-        <motion.div variants={item} className="md:col-span-2">
-          <Card className={`${predictions.health.status === 'hazardous' ? 'border-destructive border-2' : predictions.health.status === 'unhealthy' ? 'border-warning border-2' : ''}`}>
+        {/* Row 3: Water Supply Prediction */}
+        <motion.div variants={item}>
+          <Card className={`h-full ${predictions.waterSupply.status === 'critical' || predictions.waterSupply.status === 'shortage' ? 'border-warning border-2' : ''}`}>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-lg">
-                  <Activity className="h-5 w-5 text-destructive" />
-                  Health & Safety Prediction
+                  <Droplets className="h-5 w-5 text-info" />
+                  Water Supply
                 </div>
-                <Badge className={
-                  predictions.health.status === 'hazardous' ? 'bg-destructive text-destructive-foreground' :
-                    predictions.health.status === 'unhealthy' ? 'bg-warning text-warning-foreground' :
-                      predictions.health.status === 'moderate' ? 'bg-secondary text-secondary-foreground' :
-                        'bg-success text-success-foreground'
-                }>
-                  AQI: {predictions.health.aqi} - {predictions.health.status.toUpperCase()}
+                <Badge className={getStatusColor(predictions.waterSupply.status)}>
+                  {predictions.waterSupply.status.toUpperCase()}
                 </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg bg-muted/50">
-                  <p className="text-sm font-medium mb-2">Health Risk Assessment</p>
-                  <p className="text-sm text-muted-foreground">{predictions.health.healthRisk}</p>
-                  {predictions.health.precautions.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-xs font-semibold mb-1">Precautions:</p>
-                      <ul className="list-disc list-inside text-xs text-muted-foreground">
-                        {predictions.health.precautions.map(p => <li key={p}>{p}</li>)}
-                      </ul>
-                    </div>
-                  )}
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span>Shortage Risk</span>
+                  <span className="font-bold">{predictions.waterSupply.shortageLevel}%</span>
                 </div>
+                <Progress value={predictions.waterSupply.shortageLevel} className="h-3" />
+              </div>
 
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">Active Mandates</p>
-                  <div className="flex flex-wrap gap-2">
-                    {predictions.health.recommendations.schoolHoliday && (
-                      <Badge variant="destructive" className="flex gap-1 items-center">
-                        <Ban className="h-3 w-3" /> Schools Closed
-                      </Badge>
-                    )}
-                    {predictions.health.recommendations.oddEvenScheme && (
-                      <Badge variant="destructive" className="flex gap-1 items-center">
-                        <Car className="h-3 w-3" /> Odd-Even Scheme
-                      </Badge>
-                    )}
-                    {predictions.health.recommendations.maskMandate && (
-                      <Badge className="bg-warning text-warning-foreground flex gap-1 items-center">
-                        <ShieldAlert className="h-3 w-3" /> Mask Mandate
-                      </Badge>
-                    )}
-                    {!predictions.health.recommendations.schoolHoliday && !predictions.health.recommendations.oddEvenScheme && !predictions.health.recommendations.maskMandate && (
-                      <Badge variant="outline" className="text-muted-foreground">No Active Mandates</Badge>
-                    )}
-                  </div>
-                </div>
+              <div className="p-3 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground line-clamp-2">{predictions.waterSupply.reason}</p>
               </div>
 
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <CheckCircle className="h-3 w-3" />
-                Confidence: {predictions.health?.confidence || 85}%
+                Confidence: {predictions.waterSupply.confidence}%
               </div>
             </CardContent>
           </Card>

@@ -20,7 +20,7 @@ const Index = () => {
   return (
     <div className="min-h-screen gradient-hero">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8">
         {/* Hero Section */}
         <motion.section
@@ -37,16 +37,17 @@ const Index = () => {
             <Activity className="h-4 w-4 animate-pulse text-accent" />
             Live City Intelligence
           </motion.div>
-          
+
           <h1 className="mb-4 text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             Welcome to{' '}
             <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              UrbanIntel
+              Urban Intel AI
             </span>
           </h1>
-          
+
           <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-            AI-powered urban intelligence platform. Transparent, data-driven governance for a sustainable future.
+            Advanced city intelligence platform fueled by real-time government data injection.
+            Urban Intel AI transforms raw data into actionable predictions.
           </p>
 
           {/* Quick stats */}
@@ -71,7 +72,7 @@ const Index = () => {
           >
             City Vitals
           </motion.h2>
-          
+
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
               title="Weather"
@@ -82,7 +83,7 @@ const Index = () => {
               gradient="air"
               description={`Humidity: ${data.weather.humidity}%, Wind: ${data.weather.windSpeed} km/h`}
             />
-            
+
             <MetricCard
               title="Transportation"
               value={Math.round((data.transportation.busesOperating / data.transportation.totalBuses) * 100)}
@@ -92,7 +93,7 @@ const Index = () => {
               gradient="traffic"
               description={`${data.transportation.busesOperating} buses operating`}
             />
-            
+
             <MetricCard
               title="Water Supply"
               value={data.publicServices.waterSupplyLevel}
@@ -102,7 +103,7 @@ const Index = () => {
               gradient="water"
               description="Reservoir capacity level"
             />
-            
+
             <MetricCard
               title="Energy Grid"
               value={data.energy.gridStability}
@@ -130,14 +131,14 @@ const Index = () => {
           >
             Official City Directive
           </motion.h2>
-          
+
           <DirectiveBanner directive={activeDirective} />
         </section>
 
         {/* Footer */}
         <footer className="border-t border-border/50 pt-8 text-center text-sm text-muted-foreground">
           <p>
-            UrbanIntel • Smart City Intelligence Platform • 
+            UrbanIntel • Smart City Intelligence Platform •
             <span className="ml-1 text-accent">Powered by AI</span>
           </p>
           <p className="mt-2">Data refreshes automatically every 60 seconds</p>
