@@ -56,7 +56,7 @@ const ReportGenerator = () => {
 
       pdf.setFontSize(10);
       pdf.setTextColor(60);
-      
+
       // Weather
       pdf.setFont('helvetica', 'bold');
       pdf.text('Weather:', 20, yPos);
@@ -243,7 +243,7 @@ const ReportGenerator = () => {
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(60);
         addWrappedText(`Status: ${decision.status}, Approved By: ${decision.approvedBy || 'N/A'}`, 25, yPos, 160);
-        
+
         const selectedOption = decision.aiOptions.find(o => o.id === decision.selectedOptionId);
         if (selectedOption) {
           addWrappedText(`Decision: ${selectedOption.title}`, 25, yPos, 160);
@@ -288,7 +288,7 @@ const ReportGenerator = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Generate a comprehensive PDF report including all current data, AI predictions, 
+            Generate a comprehensive PDF report including all current data, AI predictions,
             recommendations, and decision history.
           </p>
 
@@ -316,8 +316,8 @@ const ReportGenerator = () => {
             Report generated with timestamp: {new Date().toLocaleString()}
           </div>
 
-          <Button 
-            onClick={generatePDF} 
+          <Button
+            onClick={generatePDF}
             disabled={isGenerating}
             className="w-full gap-2"
           >

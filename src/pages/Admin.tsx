@@ -113,6 +113,9 @@ const Admin = () => {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-foreground">Final AI Recommendations</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Welcome to the Urban Intel AI control center. Monitor and verify system data below.
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     <Sparkles className="mr-1 inline h-4 w-4 text-warning" />
                     Based on cascading analysis from all data sources

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Brain, Shield, LogOut, RefreshCw, LayoutDashboard } from 'lucide-react';
+import { Building2, Shield, LogOut, RefreshCw, LayoutDashboard, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCityContext } from '@/contexts/CityContext';
 import { cn } from '@/lib/utils';
@@ -18,13 +18,14 @@ const Header = () => {
     >
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg">
-            <Brain className="h-5 w-5 text-primary-foreground" />
+        <Link to="/" className="flex items-center gap-3 group">
+          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-lg group-hover:shadow-indigo-500/25 transition-all duration-300">
+            <Building2 className="h-5 w-5 text-white absolute" />
+            <Activity className="h-3 w-3 text-white absolute -top-1 -right-1" />
           </div>
           <div>
-            <h1 className="text-lg font-bold tracking-tight text-foreground">UrbanIntel</h1>
-            <p className="text-xs text-muted-foreground">Smart City Intelligence</p>
+            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">Urban Intel AI</h1>
+            <p className="text-[10px] font-medium text-muted-foreground tracking-wider uppercase">Advanced City OS</p>
           </div>
         </Link>
 

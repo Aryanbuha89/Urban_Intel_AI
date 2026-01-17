@@ -1,4 +1,4 @@
-// Mock data for UrbanIntel Smart City Dashboard
+// Mock data for Urban Intel AI Smart City Dashboard
 
 // ===========================================
 // DATA INTERFACES - Government Injected Data
