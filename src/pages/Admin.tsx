@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Brain, Shield, Sparkles } from 'lucide-react';
 import Header from '@/components/Header';
@@ -24,7 +26,8 @@ const Admin = () => {
     currentCrisis,
     recommendations,
     decisionHistory,
-    approveRecommendation
+    approveRecommendation,
+    userProfile
   } = useCityContext();
 
   const [approvedOptionId, setApprovedOptionId] = useState<number | null>(null);
@@ -96,8 +99,8 @@ const Admin = () => {
     publicCleanupNeeded: null,
   });
 
-  const handleApprove = (option: PolicyOption) => {
-    approveRecommendation(option);
+  const handleApprove = async (option: PolicyOption) => {
+    await approveRecommendation(option);
     setApprovedOptionId(option.id);
   };
 
@@ -219,6 +222,17 @@ const Admin = () => {
     try {
       const outputs = await runWhatIfPrediction();
       setWhatIfOutputs(outputs);
+
+      // Log to database
+      if (userProfile?.role === 'admin') {
+        supabase.from('prediction_logs').insert({
+          inputs: whatIfForm,
+          outputs: outputs,
+          admin_id: (await supabase.auth.getUser()).data.user?.id
+        }).then(({ error }) => {
+          if (error) console.error('Failed to log prediction', error);
+        });
+      }
     } catch (error) {
       setWhatIfError(
         error instanceof Error
@@ -247,6 +261,17 @@ const Admin = () => {
         ...prev,
         waterShortageLevel: outputs.waterShortageLevel,
       }));
+
+      // Log to database
+      if (userProfile?.role === 'admin') {
+        supabase.from('prediction_logs').insert({
+          inputs: whatIfForm,
+          outputs: outputs,
+          admin_id: (await supabase.auth.getUser()).data.user?.id
+        }).then(({ error }) => {
+          if (error) console.error('Failed to log prediction', error);
+        });
+      }
     } catch (error) {
       setWhatIfError(
         error instanceof Error
@@ -275,6 +300,17 @@ const Admin = () => {
         ...prev,
         trafficCongestionLevel: outputs.trafficCongestionLevel,
       }));
+
+      // Log to database
+      if (userProfile?.role === 'admin') {
+        supabase.from('prediction_logs').insert({
+          inputs: whatIfForm,
+          outputs: outputs,
+          admin_id: (await supabase.auth.getUser()).data.user?.id
+        }).then(({ error }) => {
+          if (error) console.error('Failed to log prediction', error);
+        });
+      }
     } catch (error) {
       setWhatIfError(
         error instanceof Error
@@ -303,6 +339,17 @@ const Admin = () => {
         ...prev,
         foodPriceChangePercent: outputs.foodPriceChangePercent,
       }));
+
+      // Log to database
+      if (userProfile?.role === 'admin') {
+        supabase.from('prediction_logs').insert({
+          inputs: whatIfForm,
+          outputs: outputs,
+          admin_id: (await supabase.auth.getUser()).data.user?.id
+        }).then(({ error }) => {
+          if (error) console.error('Failed to log prediction', error);
+        });
+      }
     } catch (error) {
       setWhatIfError(
         error instanceof Error
@@ -331,6 +378,17 @@ const Admin = () => {
         ...prev,
         energyPriceChangePercent: outputs.energyPriceChangePercent,
       }));
+
+      // Log to database
+      if (userProfile?.role === 'admin') {
+        supabase.from('prediction_logs').insert({
+          inputs: whatIfForm,
+          outputs: outputs,
+          admin_id: (await supabase.auth.getUser()).data.user?.id
+        }).then(({ error }) => {
+          if (error) console.error('Failed to log prediction', error);
+        });
+      }
     } catch (error) {
       setWhatIfError(
         error instanceof Error
@@ -363,6 +421,17 @@ const Admin = () => {
         ...prev,
         healthStatus: outputs.healthStatus,
       }));
+
+      // Log to database
+      if (userProfile?.role === 'admin') {
+        supabase.from('prediction_logs').insert({
+          inputs: whatIfForm,
+          outputs: outputs,
+          admin_id: (await supabase.auth.getUser()).data.user?.id
+        }).then(({ error }) => {
+          if (error) console.error('Failed to log prediction', error);
+        });
+      }
     } catch (error) {
       setWhatIfError(
         error instanceof Error
@@ -395,6 +464,17 @@ const Admin = () => {
         ...prev,
         publicCleanupNeeded: outputs.publicCleanupNeeded,
       }));
+
+      // Log to database
+      if (userProfile?.role === 'admin') {
+        supabase.from('prediction_logs').insert({
+          inputs: whatIfForm,
+          outputs: outputs,
+          admin_id: (await supabase.auth.getUser()).data.user?.id
+        }).then(({ error }) => {
+          if (error) console.error('Failed to log prediction', error);
+        });
+      }
     } catch (error) {
       setWhatIfError(
         error instanceof Error
@@ -1158,8 +1238,8 @@ const Admin = () => {
                           {whatIfOutputs.publicCleanupNeeded === null
                             ? '—'
                             : whatIfOutputs.publicCleanupNeeded
-                            ? 'Cleanup Required'
-                            : 'No Cleanup Needed'}
+                              ? 'Cleanup Required'
+                              : 'No Cleanup Needed'}
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
                           Indicates whether major cleanup operations should be triggered.

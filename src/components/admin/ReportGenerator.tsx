@@ -4,10 +4,11 @@ import { FileText, Download, Loader2, Calendar, CheckCircle } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCityContext } from '@/contexts/CityContext';
+import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
 
 const ReportGenerator = () => {
-  const { data, predictions, recommendations, decisionHistory } = useCityContext();
+  const { data, predictions, recommendations, decisionHistory, userProfile } = useCityContext();
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generatePDF = async () => {
@@ -267,6 +268,28 @@ const ReportGenerator = () => {
 
       // Save the PDF
       pdf.save(`UrbanIntel_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+
+      // Save report metadata to Supabase
+      if (userProfile?.role === 'admin') {
+        const reportContent = {
+          generatedAt: new Date().toISOString(),
+          weather: data.weather,
+          predictions: predictions,
+          recommendations: recommendations.map(r => r.title),
+          decisions: decisionHistory.slice(0, 5).map(d => ({ id: d.id, status: d.status }))
+        };
+
+        const { error } = await supabase.from('reports').insert({
+          title: `UrbanIntel Report - ${new Date().toLocaleDateString()}`,
+          content: JSON.stringify(reportContent, null, 2),
+          category: 'General',
+          admin_id: (await supabase.auth.getUser()).data.user?.id
+        });
+
+        if (error) {
+          console.error('Failed to save report to database:', error);
+        }
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
     } finally {

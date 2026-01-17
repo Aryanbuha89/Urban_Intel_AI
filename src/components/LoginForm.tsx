@@ -10,15 +10,23 @@ const LoginForm = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useCityContext();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
-    const success = login(username, password);
-    if (!success) {
-      setError('Invalid credentials. Try admin / urbanpulse');
+    setLoading(true);
+
+    try {
+      const { success, error } = await login(username, password);
+      if (!success) {
+        setError(error || 'Invalid credentials');
+      }
+    } catch (err) {
+      setError('Something went wrong');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,7 +52,7 @@ const LoginForm = () => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-foreground">Username</Label>
+              <Label htmlFor="username" className="text-foreground">Email</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -52,7 +60,7 @@ const LoginForm = () => {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
+                  placeholder="Enter email"
                   className="h-12 rounded-xl pl-10"
                   required
                 />
@@ -88,18 +96,16 @@ const LoginForm = () => {
 
             <Button
               type="submit"
-              className="h-12 w-full gap-2 rounded-xl bg-accent text-accent-foreground shadow-lg transition-all hover:bg-accent/90 hover:shadow-xl"
+              disabled={loading}
             >
               <LogIn className="h-5 w-5" />
-              Access Command Center
+              {loading ? 'Authenticating...' : 'Access Command Center'}
             </Button>
           </form>
 
           {/* Hint */}
           <div className="mt-6 rounded-xl bg-muted/50 p-4 text-center text-sm text-muted-foreground">
-            <p className="font-medium">Demo Credentials</p>
-            <p className="mt-1">Username: <code className="text-foreground">admin</code></p>
-            <p>Password: <code className="text-foreground">urbanintel</code></p>
+            <p className="font-medium">Use your Supabase credentials</p>
           </div>
         </div>
       </motion.div>

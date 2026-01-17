@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 
 const Header = () => {
   const location = useLocation();
-  const { isLoggedIn, logout, refreshData } = useCityContext();
+  const { isLoggedIn, logout, refreshData, userProfile } = useCityContext();
   const isAdmin = location.pathname === '/admin';
 
   return (
@@ -57,6 +57,15 @@ const Header = () => {
                   <span className="hidden sm:inline font-semibold">Public View</span>
                 </Button>
               </Link>
+              <div className="hidden md:flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5 border border-border/50">
+                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground leading-none">Admin</span>
+                  <span className="text-xs font-semibold text-foreground leading-none">
+                    {userProfile?.username || 'Authorized'}
+                  </span>
+                </div>
+              </div>
               <Button
                 variant="ghost"
                 size="sm"

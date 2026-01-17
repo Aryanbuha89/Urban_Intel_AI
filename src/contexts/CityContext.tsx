@@ -13,6 +13,7 @@ import {
   getCrisisType,
   generateMockDecisionHistory,
 } from '@/lib/mockData';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CityContextType {
   data: CityData;
@@ -25,9 +26,12 @@ interface CityContextType {
   backendMode: 'backend' | 'mock';
   backendOutputs: BackendModelOutputs | null;
   isLoggedIn: boolean;
-  login: (username: string, password: string) => boolean;
-  logout: () => void;
-  approveRecommendation: (option: PolicyOption) => void;
+  userProfile: { username: string; role: string } | null;
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  logout: () => Promise<void>;
+  approveRecommendation: (option: PolicyOption) => Promise<void>;
+  refreshData: () => void;
   refreshData: () => void;
 }
 
@@ -141,6 +145,42 @@ export const CityProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [backendMode, setBackendMode] = useState<'backend' | 'mock'>('mock');
   const [backendOutputs, setBackendOutputs] = useState<BackendModelOutputs | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ username: string; role: string } | null>(null);
+
+  // Check Supabase session on mount
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsLoggedIn(!!session);
+      if (session) {
+        fetchProfile(session.user.id);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+      if (session) {
+        fetchProfile(session.user.id);
+      } else {
+        setUserProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('username, role')
+      .eq('id', userId)
+      .single();
+
+    if (data) {
+      setUserProfile(data);
+    }
+  };
 
   const currentCrisis = getCrisisType(data, predictions);
 
@@ -150,12 +190,12 @@ export const CityProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const realWeather = await fetchRealWeatherData();
       const mergedData: CityData = realWeather
         ? {
-            ...baseData,
-            weather: {
-              ...baseData.weather,
-              ...realWeather,
-            },
-          }
+          ...baseData,
+          weather: {
+            ...baseData.weather,
+            ...realWeather,
+          },
+        }
         : baseData;
 
       setData(mergedData);
@@ -185,20 +225,29 @@ export const CityProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => clearInterval(interval);
   }, [refreshData]);
 
-  const login = useCallback((username: string, password: string): boolean => {
-    if (username === 'admin' && password === 'urbanintel') {
-      setIsLoggedIn(true);
-      return true;
+  const login = useCallback(async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: 'An unexpected error occurred' };
     }
-    return false;
   }, []);
 
-  const logout = useCallback(() => {
-    setIsLoggedIn(false);
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
   }, []);
 
-  const approveRecommendation = useCallback((option: PolicyOption) => {
-    // Move current directive to history
+  const approveRecommendation = useCallback(async (option: PolicyOption) => {
+    // Local state update (optimistic)
     if (activeDirective) {
       setDirectiveHistory(prev => [{
         id: crypto.randomUUID(),
@@ -208,9 +257,9 @@ export const CityProvider: React.FC<{ children: React.ReactNode }> = ({ children
         category: option.category,
       }, ...prev.slice(0, 9)]);
     }
-    
+
     setActiveDirective(option.instructionText);
-    
+
     const newDecision: PolicyDecision = {
       id: crypto.randomUUID(),
       alertType: currentCrisis.type,
@@ -222,9 +271,25 @@ export const CityProvider: React.FC<{ children: React.ReactNode }> = ({ children
       createdAt: new Date().toISOString(),
       predictions,
     };
-    
+
     setDecisionHistory(prev => [newDecision, ...prev]);
-  }, [activeDirective, currentCrisis.type, recommendations, predictions]);
+
+    // Save to Database
+    if (userProfile?.role === 'admin') {
+      const { error } = await supabase.from('decisions').insert({
+        title: option.title,
+        category: option.category,
+        description: option.description,
+        impact: option.impact,
+        status: 'PUBLISHED',
+        admin_id: (await supabase.auth.getUser()).data.user?.id
+      });
+
+      if (error) {
+        console.error('Failed to save decision to database:', error);
+      }
+    }
+  }, [activeDirective, currentCrisis.type, recommendations, predictions, userProfile]);
 
   return (
     <CityContext.Provider value={{
@@ -238,6 +303,7 @@ export const CityProvider: React.FC<{ children: React.ReactNode }> = ({ children
       backendMode,
       backendOutputs,
       isLoggedIn,
+      userProfile,
       login,
       logout,
       approveRecommendation,
