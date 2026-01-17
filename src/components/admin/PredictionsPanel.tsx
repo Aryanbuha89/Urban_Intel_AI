@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { 
+import {
   Droplets,
   Car,
   ShoppingBasket,
@@ -10,7 +10,10 @@ import {
   TrendingDown,
   CheckCircle,
   Clock,
-  Brain
+  Brain,
+  Activity,
+  Ban,
+  ShieldAlert
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -63,7 +66,7 @@ const PredictionsPanel = () => {
       </div>
 
       {/* Data Flow Indicator */}
-      <motion.div 
+      <motion.div
         variants={item}
         className="flex items-center justify-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3"
       >
@@ -133,7 +136,7 @@ const PredictionsPanel = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <Progress value={predictions.traffic.congestionLevel} className="h-3" />
-              
+
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Peak Hours</p>
@@ -313,7 +316,7 @@ const PredictionsPanel = () => {
                 <p className="text-sm font-medium mb-2">Planned Improvements</p>
                 <div className="flex flex-wrap gap-2">
                   {predictions.publicServices.qualityImprovements.map((improvement) => (
-                    <span 
+                    <span
                       key={improvement}
                       className="px-3 py-1 text-sm rounded-full bg-success/20 text-success"
                     >
@@ -330,8 +333,76 @@ const PredictionsPanel = () => {
             </CardContent>
           </Card>
         </motion.div>
-      </div>
-    </motion.div>
+
+
+        {/* Health Prediction */}
+        <motion.div variants={item} className="md:col-span-2">
+          <Card className={`${predictions.health.status === 'hazardous' ? 'border-destructive border-2' : predictions.health.status === 'unhealthy' ? 'border-warning border-2' : ''}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-lg">
+                  <Activity className="h-5 w-5 text-destructive" />
+                  Health & Safety Prediction
+                </div>
+                <Badge className={
+                  predictions.health.status === 'hazardous' ? 'bg-destructive text-destructive-foreground' :
+                    predictions.health.status === 'unhealthy' ? 'bg-warning text-warning-foreground' :
+                      predictions.health.status === 'moderate' ? 'bg-secondary text-secondary-foreground' :
+                        'bg-success text-success-foreground'
+                }>
+                  AQI: {predictions.health.aqi} - {predictions.health.status.toUpperCase()}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <p className="text-sm font-medium mb-2">Health Risk Assessment</p>
+                  <p className="text-sm text-muted-foreground">{predictions.health.healthRisk}</p>
+                  {predictions.health.precautions.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold mb-1">Precautions:</p>
+                      <ul className="list-disc list-inside text-xs text-muted-foreground">
+                        {predictions.health.precautions.map(p => <li key={p}>{p}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Active Mandates</p>
+                  <div className="flex flex-wrap gap-2">
+                    {predictions.health.recommendations.schoolHoliday && (
+                      <Badge variant="destructive" className="flex gap-1 items-center">
+                        <Ban className="h-3 w-3" /> Schools Closed
+                      </Badge>
+                    )}
+                    {predictions.health.recommendations.oddEvenScheme && (
+                      <Badge variant="destructive" className="flex gap-1 items-center">
+                        <Car className="h-3 w-3" /> Odd-Even Scheme
+                      </Badge>
+                    )}
+                    {predictions.health.recommendations.maskMandate && (
+                      <Badge className="bg-warning text-warning-foreground flex gap-1 items-center">
+                        <ShieldAlert className="h-3 w-3" /> Mask Mandate
+                      </Badge>
+                    )}
+                    {!predictions.health.recommendations.schoolHoliday && !predictions.health.recommendations.oddEvenScheme && !predictions.health.recommendations.maskMandate && (
+                      <Badge variant="outline" className="text-muted-foreground">No Active Mandates</Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <CheckCircle className="h-3 w-3" />
+                Confidence: {predictions.health?.confidence || 85}%
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div >
+    </motion.div >
   );
 };
 

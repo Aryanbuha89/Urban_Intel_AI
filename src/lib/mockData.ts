@@ -12,6 +12,7 @@ export interface WeatherData {
   rainfallLast12Months: number[]; // Monthly rainfall in mm
   recentStormOrFlood: boolean;
   stormDate?: string;
+  aqi: number; // Air Quality Index
 }
 
 export interface TransportationData {
@@ -107,12 +108,26 @@ export interface PublicServicesPrediction {
   confidence: number;
 }
 
+export interface HealthPrediction {
+  status: 'good' | 'moderate' | 'unhealthy' | 'hazardous';
+  aqi: number;
+  healthRisk: string;
+  precautions: string[];
+  recommendations: {
+    oddEvenScheme: boolean;
+    schoolHoliday: boolean;
+    maskMandate: boolean;
+  };
+  confidence: number;
+}
+
 export interface AllPredictions {
   waterSupply: WaterSupplyPrediction;
   traffic: TrafficPrediction;
   foodPrice: FoodPricePrediction;
   energyPrice: EnergyPricePrediction;
   publicServices: PublicServicesPrediction;
+  health: HealthPrediction;
 }
 
 // ===========================================
@@ -174,6 +189,7 @@ export const generateCityData = (): CityData => {
       rainfallLast12Months: rainfallPattern,
       recentStormOrFlood: Math.random() > 0.7,
       stormDate: Math.random() > 0.7 ? new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString() : undefined,
+      aqi: Math.round(50 + Math.random() * 250), // Random AQI between 50 and 300
     },
     transportation: {
       busesOperating: Math.round(150 + Math.random() * 100),
@@ -268,7 +284,7 @@ export const predictTraffic = (data: CityData, waterPrediction: WaterSupplyPredi
     congestionLevel += 20;
     affectedAreas.push(...transportation.busRoutesCongested);
     busImpact = `High bus activity (${transportation.busesOperating}/${transportation.totalBuses}) causing congestion in ${transportation.busRoutesCongested.join(', ')} areas`;
-    
+
     if (transportation.busRoutesCongested.includes('west')) {
       roadsToAvoid.push('West Ring Road', 'Industrial Highway');
     }
@@ -444,6 +460,70 @@ export const predictPublicServices = (data: CityData): PublicServicesPrediction 
   };
 };
 
+
+export const predictHealth = (data: CityData, traffic: TrafficPrediction): HealthPrediction => {
+  const { weather } = data;
+  const { aqi, currentTemperature, windSpeed } = weather;
+  const { congestionLevel } = traffic;
+
+  let status: HealthPrediction['status'] = 'good';
+  let healthRisk = 'Conditions are favorable.';
+  const precautions: string[] = [];
+  const recommendations = {
+    oddEvenScheme: false,
+    schoolHoliday: false,
+    maskMandate: false,
+  };
+
+  // AQI Logic
+  let effectiveAqi = aqi;
+  // High traffic increases local effective AQI
+  if (congestionLevel > 70) effectiveAqi += 20;
+  if (congestionLevel > 90) effectiveAqi += 40;
+
+  if (effectiveAqi > 300) {
+    status = 'hazardous';
+    healthRisk = `Hazardous Air Quality (AQI: ${effectiveAqi}). Severe health risk for all.`;
+    precautions.push('Avoid all outdoor exertion', 'Stay indoors', 'Keep windows closed');
+    recommendations.schoolHoliday = true;
+    recommendations.maskMandate = true;
+    recommendations.oddEvenScheme = true;
+  } else if (effectiveAqi > 200) {
+    status = 'unhealthy';
+    healthRisk = `Very Unhealthy Air Quality (AQI: ${effectiveAqi}). Health warnings of emergency conditions.`;
+    precautions.push('Wear masks outdoors', 'Avoid prolonged outdoor activities');
+    recommendations.maskMandate = true;
+    if (congestionLevel > 80) recommendations.oddEvenScheme = true;
+  } else if (effectiveAqi > 100) {
+    status = 'moderate';
+    healthRisk = `Moderate Air Quality (AQI: ${effectiveAqi}). Sensitive groups should reduce outdoor exertion.`;
+    precautions.push('Sensitive groups wear masks');
+  }
+
+  // Weather Logic
+  if (currentTemperature > 40) {
+    if (status !== 'hazardous') healthRisk += ' Extreme Heat Warning.';
+    precautions.push('Stay hydrated', 'Avoid direct sun between 12-4 PM');
+  } else if (currentTemperature < 5) {
+    if (status !== 'hazardous') healthRisk += ' Extreme Cold Warning.';
+    precautions.push('Dress in layers', 'Protect against frostbite');
+  }
+
+  if (windSpeed > 30) {
+    if (status !== 'hazardous') healthRisk += ' High Wind Alert.';
+    precautions.push('Secure loose objects', 'Watch for falling debris');
+  }
+
+  return {
+    status,
+    aqi: effectiveAqi,
+    healthRisk,
+    precautions,
+    recommendations,
+    confidence: 85 + Math.round(Math.random() * 10),
+  };
+};
+
 // ===========================================
 // GENERATE ALL PREDICTIONS
 // ===========================================
@@ -454,6 +534,7 @@ export const generateAllPredictions = (data: CityData): AllPredictions => {
   const foodPrice = predictFoodPrice(data, waterSupply);
   const energyPrice = predictEnergyPrice(data);
   const publicServices = predictPublicServices(data);
+  const health = predictHealth(data, traffic);
 
   return {
     waterSupply,
@@ -461,6 +542,7 @@ export const generateAllPredictions = (data: CityData): AllPredictions => {
     foodPrice,
     energyPrice,
     publicServices,
+    health,
   };
 };
 
@@ -480,7 +562,7 @@ export const generateFinalRecommendations = (
     options.push({
       id: 1,
       title: waterSupply.status === 'critical' ? 'Emergency Water Rationing' : 'Water Conservation Advisory',
-      description: waterSupply.status === 'critical' 
+      description: waterSupply.status === 'critical'
         ? `Implement strict water rationing for ${waterSupply.shortageDuration}. Limit supply to essential services.`
         : `Issue water conservation advisory. Reduce non-essential water usage.`,
       impact: `Shortage Level: ${waterSupply.shortageLevel}% | Duration: ${waterSupply.shortageDuration}`,
@@ -550,6 +632,33 @@ export const generateFinalRecommendations = (
     });
   }
 
+  // Priority 6: Health & Safety (AQI, Extreme Weather)
+  const { health } = predictions;
+  if (health.status === 'hazardous' || health.status === 'unhealthy' || health.recommendations.oddEvenScheme) {
+    const title = health.status === 'hazardous' ? '⛔ HAZARDOUS HEALTH ALERT' : '⚠️ Health & Pollution Advisory';
+    let instruction = '';
+
+    if (health.recommendations.schoolHoliday) instruction += '🏫 SCHOOLS CLOSED. ';
+    if (health.recommendations.oddEvenScheme) instruction += '🚗 ODD-EVEN SCHEME IN EFFECT. ';
+    if (health.recommendations.maskMandate) instruction += '😷 MASKS MANDATORY. ';
+
+    instruction += health.healthRisk;
+
+    options.push({
+      id: options.length + 1,
+      title: title,
+      description: `AQI Level: ${health.aqi} | Status: ${health.status.toUpperCase()}`,
+      impact: `Public Health Risk: High | Measures: ${[
+        health.recommendations.oddEvenScheme ? 'Odd-Even' : '',
+        health.recommendations.schoolHoliday ? 'School Holiday' : '',
+        health.recommendations.maskMandate ? 'Masks' : ''
+      ].filter(Boolean).join(', ') || 'Advisory only'}`,
+      instructionText: instruction,
+      category: 'Health & Safety',
+      basedOn: ['Air Quality Index', 'Weather Conditions', 'Traffic Pollution'],
+    });
+  }
+
   // Ensure at least 3 options
   if (options.length < 3) {
     if (!options.find(o => o.category === 'Transportation')) {
@@ -604,6 +713,9 @@ export const getCrisisType = (data: CityData, predictions: AllPredictions): { ty
   }
   if (energyPrice.priceChangePercent > 10 || traffic.congestionLevel > 60) {
     return { type: 'RESOURCE_STRESS', severity: 'medium' };
+  }
+  if (predictions.health.status === 'hazardous') {
+    return { type: 'HEALTH_HAZARD', severity: 'critical' };
   }
   return { type: 'NORMAL', severity: 'low' };
 };
