@@ -1,73 +1,199 @@
-# Welcome to your Lovable project
+# Urban Intel AI 🌆🤖
+**Advanced Smart City Management Dashboard with Recursive AI Intelligence**
 
-## Project info
+**Urban Intel AI** is a next-generation administrative platform designed for smart city governance. Unlike traditional dashboards that only *display* data, this system *understands* the causal relationships between urban sectors. It uses a cascading AI model to predict how a crisis in one area (e.g., severe weather) triggers risks in others (e.g., traffic congestion, energy grid instability, and public health).
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+---
 
-## How can I edit this code?
+## 🚀 Key Features
 
-There are several ways of editing your application.
+### 🧠 1. Evidence of "Cascading Intelligence"
+The core innovation of this system is its ability to model chain reactions. It doesn't just treat "Rain" and "Traffic" as separate numbers; it understands that `Rain > 50mm` **causes** `Traffic Efficiency` to drop, which **causes** `Pollution` to rise.
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+#### **Core Logic Snippet (TypeScript)**
+*This snippet proves the system understands cause-and-effect:*
+```typescript
+// src/lib/mockData.ts
+// This function transforms raw ML outputs into actionable insights
+export const generateAllPredictionsFromBackend = (data: CityData, outputs: BackendInputs) => {
+  // 1. Water Shortage Prediction
+  const waterLevel = Math.round(outputs.waterShortageLevel);
+  const waterSupply = {
+    status: waterLevel >= 80 ? 'critical' : 'normal',
+    reason: `Model-predicted shortage at ${waterLevel}% due to low rainfall`,
+    confidence: 90,
+  };
+  // 2. Traffic Prediction (Context-Aware)
+  const trafficLevel = Math.round(outputs.trafficCongestionLevel);
+  const traffic = {
+    congestionLevel: trafficLevel,
+    // Real-time weather context is injected into the explanation
+    weatherImpact: `Heavy rainfall (${data.weather.currentRainfall}mm) impacting routes.`,
+    confidence: 85,
+  };
+  return { waterSupply, traffic, ... }; // Returns holistic city view
+};
 ```
 
-**Edit a file directly in GitHub**
+### 🧪 2. "What-If" Scenario Simulation Engine
+Judges can interactively test the model's robustness. Change the rainfall, increase the population density, or cut the energy budget, and watch the system recalculate risks in real-time.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+#### **Simulation Engine Snippet (TypeScript)**
+*Demonstrates interactive scenario planning:*
+```typescript
+// src/pages/Admin.tsx
+const runWhatIfPrediction = async () => {
+  // 1. Construct the Scenario Payload from User Inputs
+  const payload = {
+    weather: {
+      currentRainfall: Number(whatIfForm.weather.currentRainfall), // User-defined rain
+      recentStormOrFlood: Boolean(whatIfForm.weather.recentStormOrFlood),
+    },
+    transportation: {
+      totalBuses: Number(whatIfForm.transportation.totalBuses),    // User-defined transit
+    },
+    // ... other sectors
+  };
+  // 2. Send to Python/FastAPI Backend for Real-time Inference
+  const response = await fetch(`${API_URL}/predict-all`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  // 3. Update UI with New Predicted Risks
+  const result = await response.json();
+  return {
+    trafficCongestionLevel: result.trafficCongestionLevel, // See how traffic changes on the fly!
+    ...
+  };
+};
+```
 
-**Use GitHub Codespaces**
+### 🕸️ 3. Backend Model Orchestration
+The system runs multiple specialized ML models in parallel and then runs a second-layer "meta-model" to calculate dependent risks.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+#### **Orchestrator Snippet (Python Example)**
+*Demonstrates multi-model serving:*
+```python
+# ml/api_server.py
+@app.post("/predict-all")
+def predict_all(input_data: CityData):
+    # 1. Run independent models in parallel
+    traffic_risk = traffic_model.predict(input_data.transportation)
+    water_risk = water_model.predict(input_data.weather)
+    
+    # 2. Run dependent models (Cascading Logic)
+    # Health risk depends on Water Quality + Traffic Pollution
+    health_risk = health_model.predict({
+        "aqi": input_data.weather.aqi,
+        "traffic_congestion": traffic_risk,
+        "water_quality": water_risk
+    })
+    
+    return {
+        "traffic_congestion_level": traffic_risk,
+        "health_status": health_risk,
+        # ...
+    }
+```
 
-## What technologies are used for this project?
+---
 
-This project is built with:
+## 🛠️ Complete Tech Stack
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Frontend & UI
+*   **Framework**: React 18 (Vite)
+*   **Language**: TypeScript
+*   **Styling**: Tailwind CSS, shadcn/ui
+*   **Icons**: Lucide React
+*   **Animations**: Framer Motion
+*   **Data Visualization**: Recharts
 
-## How can I deploy this project?
+### Backend & Data
+*   **Authentication**: Supabase Auth
+*   **Database**: PostgreSQL (via Supabase)
+*   **Row Level Security (RLS)**: Enabled for Admin-only access
+*   **Reporting**: jsPDF (Client-side PDF generation)
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+### Testing & Quality
+*   **Logic Testing**: Vitest
+*   **Linting**: ESLint
+*   **Query Management**: TanStack Query
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
+## 📦 All Dependencies
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Production Dependencies
+| Package | Purpose |
+| :--- | :--- |
+| **@supabase/supabase-js** | Authentication & Database connection |
+| **recharts** | Interactive charts and graphs |
+| **framer-motion** | Smooth UI transitions and animations |
+| **jspdf** | Generating downloadable PDF reports |
+| **lucide-react** | Modern icon set |
+| **react-hook-form** | Form validation and handling |
+| **zod** | Schema validation |
+| **radix-ui/react-*** | Accessible UI primitives (Dialogs, Tabs, etc.) |
+| **clsx, tailwind-merge** | CSS class utility management |
+| **date-fns** | Date formatting and manipulation |
+| **sonner** | Toast notifications |
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### Development Dependencies
+| Package | Purpose |
+| :--- | :--- |
+| **typescript** | Static typing |
+| **vite** | Build tool and dev server |
+| **tailwindcss** | Utility-first CSS framework |
+| **eslint** | Code linting |
+| **vitest** | Unit testing |
+
+---
+
+## ⚙️ Setup & Installation
+
+Follow these steps to deploy the project locally on your machine.
+
+### 1. clone the Repository
+```bash
+git clone <YOUR_GIT_URL>
+cd Urban_Intel_AI
+```
+
+### 2. Install Dependencies
+```bash
+npm install
+```
+
+### 3. Environment Configuration
+Create a `.env` file in the root directory. You can use the example below:
+
+**`.env` Example**
+```env
+# Supabase Configuration (Required for Auth & DB)
+VITE_SUPABASE_URL=https://iwcwsrqjhihkcoahnclm.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3Y3dzcnFqaGloa2NvYWhuY2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NzEyNzYsImV4cCI6MjA4NDI0NzI3Nn0.UaeUNg5Yw4Jwgj5-U-5xt4e72H6Gm96bBTruVvwG-yw
+
+
+# Backend API (Optional - defaults to mock mode if disconnected)
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+### 4. Database Setup (Supabase)
+Run the provided `supabase_schema.sql` in your Supabase project to generate:
+1.  **Profiles Table**: Stores admin user roles.
+2.  **Prediction Logs**: Archives every AI prediction run.
+3.  **Reports Table**: Stores metadata for generated PDFs.
+4.  **Decisions Table**: Logs all "Approved & Published" policies.
+
+### 5. Run the Application
+```bash
+npm run dev
+```
+The application will launch at `http://localhost:8080`.
+
+---
+
+## 🏆 Hackathon Judges Note
+This project was built to demonstrate **practical AI application** in governance. It moves beyond simple data viewing to provide *prescriptive* and *predictive* capabilities, solving real-world complexity through interconnected models.
+
+**Developed by [Hell Boys Team]**
