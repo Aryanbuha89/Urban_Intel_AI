@@ -99,7 +99,7 @@ const LoginForm = () => {
           <div className="mt-6 rounded-xl bg-muted/50 p-4 text-center text-sm text-muted-foreground">
             <p className="font-medium">Demo Credentials</p>
             <p className="mt-1">Username: <code className="text-foreground">admin</code></p>
-            <p>Password: <code className="text-foreground">urbanpulse</code></p>
+            <p>Password: <code className="text-foreground">urbanintel</code></p>
           </div>
         </div>
       </motion.div>
