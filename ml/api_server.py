@@ -65,8 +65,8 @@ class ModelOutputs(BaseModel):
     trafficCongestionLevel: float
     foodPriceChangePercent: float
     energyPriceChangePercent: float
-    publicCleanupNeeded: bool
-    healthStatus: Literal[0, 1, 2, 3]
+    publicCleanupNeeded: float
+    healthStatus: float
 
 
 app = FastAPI()
@@ -259,10 +259,15 @@ def predict_all(city: CityInput) -> ModelOutputs:
     ]
     public_features = public_features[public_feature_order]
     if public_model is not None:
-        public_cleanup_needed_pred = public_model.predict(public_features)[0]
-        public_cleanup_needed = bool(int(public_cleanup_needed_pred))
+        public_proba = public_model.predict_proba(public_features)[0]
+        classes = list(public_model.classes_)
+        if 1 in classes:
+            idx = classes.index(1)
+            public_cleanup_needed = float(public_proba[idx] * 100.0)
+        else:
+            public_cleanup_needed = float(public_proba.max() * 100.0)
     else:
-        public_cleanup_needed = False
+        public_cleanup_needed = 0.0
 
     health_features = pd.DataFrame(
         [
@@ -277,13 +282,17 @@ def predict_all(city: CityInput) -> ModelOutputs:
         ]
     )
     if health_model is not None:
-        health_status_pred = int(health_model.predict(health_features)[0])
+        health_class = int(health_model.predict(health_features)[0])
+        if health_class <= 0:
+            health_status_pred = 0.0
+        elif health_class == 1:
+            health_status_pred = 33.0
+        elif health_class == 2:
+            health_status_pred = 66.0
+        else:
+            health_status_pred = 100.0
     else:
-        health_status_pred = 0
-    if health_status_pred < 0:
-        health_status_pred = 0
-    if health_status_pred > 3:
-        health_status_pred = 3
+        health_status_pred = 0.0
 
     return ModelOutputs(
         waterShortageLevel=water_shortage_level,

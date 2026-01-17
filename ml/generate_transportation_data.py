@@ -10,7 +10,7 @@ def generate_synthetic_transportation_rows(n_rows: int) -> pd.DataFrame:
         total_buses = 300
         buses_operating = random.randint(120, 280)
         avg_vehicles = random.randint(3000, 9000)
-        peak_multiplier = round(random.uniform(1.2, 2.2), 2)
+        peak_multiplier = random.randint(12, 22)
         routes = ["west", "south", "east", "north", "central"]
         congested = {route: 1 if random.random() < 0.5 else 0 for route in routes}
         if sum(congested.values()) == 0:
@@ -32,7 +32,7 @@ def generate_synthetic_transportation_rows(n_rows: int) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def build_transportation_dataset(n_rows: int = 20000, output_path: str = "ml/data/transportation_data.csv") -> pd.DataFrame:
+def build_transportation_dataset(n_rows: int = 200000, output_path: str = "ml/data/transportation_data.csv") -> pd.DataFrame:
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df = generate_synthetic_transportation_rows(n_rows)
     df.to_csv(output_path, index=False)
@@ -41,4 +41,3 @@ def build_transportation_dataset(n_rows: int = 20000, output_path: str = "ml/dat
 
 if __name__ == "__main__":
     build_transportation_dataset()
-
