@@ -86,7 +86,7 @@ const Admin = () => {
     foodPriceChangePercent: number | null;
     energyPriceChangePercent: number | null;
     healthStatus: number | null;
-    publicCleanupNeeded: boolean | null;
+    publicCleanupNeeded: number | null;
   }>({
     waterShortageLevel: null,
     trafficCongestionLevel: null,
@@ -209,7 +209,7 @@ const Admin = () => {
         typeof json.energyPriceChangePercent === 'number' ? json.energyPriceChangePercent : null,
       healthStatus: typeof json.healthStatus === 'number' ? json.healthStatus : null,
       publicCleanupNeeded:
-        typeof json.publicCleanupNeeded === 'boolean' ? json.publicCleanupNeeded : null,
+        typeof json.publicCleanupNeeded === 'number' ? json.publicCleanupNeeded : null,
     };
   };
 
@@ -575,6 +575,7 @@ const Admin = () => {
                               value={whatIfForm.weather.currentTemperature}
                               onChange={e => handleWhatIfChange('weather', 'currentTemperature')(e.target.value)}
                             />
+                          <p className="mt-1 text-xs text-red-500">Range: -10 to 50</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-humidity">Humidity (%)</Label>
@@ -586,6 +587,7 @@ const Admin = () => {
                               value={whatIfForm.weather.humidity}
                               onChange={e => handleWhatIfChange('weather', 'humidity')(e.target.value)}
                             />
+                          <p className="mt-1 text-xs text-red-500">Range: 0 to 100</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-wind">Wind speed (km/h)</Label>
@@ -597,6 +599,7 @@ const Admin = () => {
                               value={whatIfForm.weather.windSpeed}
                               onChange={e => handleWhatIfChange('weather', 'windSpeed')(e.target.value)}
                             />
+                          <p className="mt-1 text-xs text-red-500">Range: 0 to 60</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-rain">Current rainfall (mm)</Label>
@@ -608,6 +611,7 @@ const Admin = () => {
                               value={whatIfForm.weather.currentRainfall}
                               onChange={e => handleWhatIfChange('weather', 'currentRainfall')(e.target.value)}
                             />
+                          <p className="mt-1 text-xs text-red-500">Range: 0 to 200</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-rain-total">Rainfall last 12 months (mm total)</Label>
@@ -619,6 +623,7 @@ const Admin = () => {
                               value={whatIfRainfallTotal}
                               onChange={e => setWhatIfRainfallTotal(Number(e.target.value) || 0)}
                             />
+                          <p className="mt-1 text-xs text-red-500">Range: 0 to 3000</p>
                             <p className="mt-1 text-xs text-muted-foreground">
                               Average per month used for model: {whatIfRainfallAverage} mm
                             </p>
@@ -645,6 +650,7 @@ const Admin = () => {
                               value={whatIfForm.weather.aqi}
                               onChange={e => handleWhatIfChange('weather', 'aqi')(e.target.value)}
                             />
+                          <p className="mt-1 text-xs text-red-500">Range: 0 to 500</p>
                           </div>
                         </div>
                       </div>
@@ -664,6 +670,7 @@ const Admin = () => {
                                 handleWhatIfChange('transportation', 'busesOperating')(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 120 to 280</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-vehicles">Average vehicles per hour</Label>
@@ -680,6 +687,7 @@ const Admin = () => {
                                 )(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 3000 to 9000</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-peak-multiplier">Peak hour multiplier</Label>
@@ -697,6 +705,7 @@ const Admin = () => {
                                 )(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 1.2 to 2.2</p>
                           </div>
                           <div className="space-y-1">
                             <Label>Congested routes</Label>
@@ -793,6 +802,7 @@ const Admin = () => {
                                 handleWhatIfChange('agriculture', 'cropYieldLastYear')(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 50 to 110</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-stock-level">Current stock level (% of reserves)</Label>
@@ -806,6 +816,7 @@ const Admin = () => {
                                 handleWhatIfChange('agriculture', 'currentStockLevel')(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 20 to 100</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-supply-efficiency">Supply chain efficiency (%)</Label>
@@ -822,6 +833,7 @@ const Admin = () => {
                                 )(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 50 to 100</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-import-dependency">Import dependency (%)</Label>
@@ -835,6 +847,7 @@ const Admin = () => {
                                 handleWhatIfChange('agriculture', 'importDependency')(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 5 to 40</p>
                           </div>
                         </div>
                       </div>
@@ -854,6 +867,7 @@ const Admin = () => {
                                 handleWhatIfChange('energy', 'currentUsageMW')(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 600 to 1300</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-avg-usage">Average usage last year (MW)</Label>
@@ -867,6 +881,7 @@ const Admin = () => {
                                 handleWhatIfChange('energy', 'avgUsageLastYear')(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 700 to 1100</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-peak-demand">Peak demand (MW)</Label>
@@ -880,6 +895,7 @@ const Admin = () => {
                                 handleWhatIfChange('energy', 'peakDemandMW')(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 900 to 1500</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-grid-stability">Grid stability (%)</Label>
@@ -893,6 +909,7 @@ const Admin = () => {
                                 handleWhatIfChange('energy', 'gridStability')(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 75 to 100</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-renewable">Renewable percentage (%)</Label>
@@ -906,6 +923,7 @@ const Admin = () => {
                                 handleWhatIfChange('energy', 'renewablePercentage')(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 10 to 40</p>
                           </div>
                         </div>
                       </div>
@@ -930,6 +948,7 @@ const Admin = () => {
                                 )(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 5 to 50</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-water-supply">Water supply level (%)</Label>
@@ -946,6 +965,7 @@ const Admin = () => {
                                 )(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 20 to 100</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-sewer-health">Sewer system health (%)</Label>
@@ -962,6 +982,7 @@ const Admin = () => {
                                 )(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 60 to 100</p>
                           </div>
                         </div>
                         <div className="space-y-2">
@@ -980,6 +1001,7 @@ const Admin = () => {
                                 )(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 5 to 25</p>
                           </div>
                           <div>
                             <Label htmlFor="whatif-maintenance-tasks">Pending maintenance tasks</Label>
@@ -996,6 +1018,7 @@ const Admin = () => {
                                 )(e.target.value)
                               }
                             />
+                            <p className="mt-1 text-xs text-red-500">Range: 10 to 70</p>
                           </div>
                         </div>
                       </div>
@@ -1133,11 +1156,11 @@ const Admin = () => {
                         </div>
                         <div className="mt-1 text-2xl font-bold">
                           {whatIfOutputs.healthStatus !== null
-                            ? `Level ${Math.round(whatIfOutputs.healthStatus)}`
+                            ? `${Math.round(whatIfOutputs.healthStatus)}%`
                             : '—'}
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          0=Excellent, 1=Moderate, 2=Poor, 3=Critical population health.
+                          Higher value means more severe population health risk (0% to 100%).
                         </p>
                         <Button
                           type="button"
@@ -1155,14 +1178,12 @@ const Admin = () => {
                           Public Cleanup Model
                         </div>
                         <div className="mt-1 text-2xl font-bold">
-                          {whatIfOutputs.publicCleanupNeeded === null
-                            ? '—'
-                            : whatIfOutputs.publicCleanupNeeded
-                            ? 'Cleanup Required'
-                            : 'No Cleanup Needed'}
+                          {whatIfOutputs.publicCleanupNeeded !== null
+                            ? `${Math.round(whatIfOutputs.publicCleanupNeeded)}%`
+                            : '—'}
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Indicates whether major cleanup operations should be triggered.
+                          Probability that major cleanup operations should be triggered (0% to 100%).
                         </p>
                         <Button
                           type="button"

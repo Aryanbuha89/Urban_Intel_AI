@@ -66,19 +66,19 @@ def generate_synthetic_weather_rows(
         rows.append(
             {
                 "sample_id": i,
-                "temperature_c": round(temperature, 2),
-                "humidity": round(humidity, 2),
-                "wind_speed_kmh": round(wind_speed, 2),
-                "rainfall_mm": round(rainfall, 2),
-                "rainfall_last_12_months_mm": round(total_rainfall_12m, 2),
+                "temperature_c": int(round(temperature)),
+                "humidity": int(round(humidity)),
+                "wind_speed_kmh": int(round(wind_speed)),
+                "rainfall_mm": int(round(rainfall)),
+                "rainfall_last_12_months_mm": int(round(total_rainfall_12m)),
                 "recent_storm_or_flood": recent_storm,
-                "aqi": round(aqi, 2),
+                "aqi": int(round(aqi)),
             }
         )
     return pd.DataFrame(rows)
 
 
-def build_weather_dataset(n_rows: int = 20000, output_path: str = "ml/data/weather_data.csv") -> pd.DataFrame:
+def build_weather_dataset(n_rows: int = 200000, output_path: str = "ml/data/weather_data.csv") -> pd.DataFrame:
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     api_key = _get_env("OPENWEATHER_API_KEY")
     city = _get_env("OPENWEATHER_CITY", "Delhi,IN")
