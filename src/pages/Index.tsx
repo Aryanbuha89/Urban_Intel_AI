@@ -8,7 +8,7 @@ import CityOverviewChart from '@/components/CityOverviewChart';
 import { useCityContext } from '@/contexts/CityContext';
 
 const Index = () => {
-  const { data, activeDirective } = useCityContext();
+  const { data, activeDirective, directiveHistory } = useCityContext();
 
   const getStatusFromValue = (value: number, thresholds: { good: number; moderate: number; poor: number }) => {
     if (value >= thresholds.good) return 'good';
@@ -117,9 +117,15 @@ const Index = () => {
         </section>
 
         {/* City Overview Chart */}
-        <section className="mb-12 grid gap-6 lg:grid-cols-2">
+        <section
+          className={
+            directiveHistory.length > 0 || activeDirective
+              ? 'mb-12 grid gap-6 lg:grid-cols-2'
+              : 'mb-12'
+          }
+        >
           <CityOverviewChart />
-          <DirectiveHistory />
+          {(directiveHistory.length > 0 || activeDirective) && <DirectiveHistory />}
         </section>
 
         {/* Official Directive Section */}

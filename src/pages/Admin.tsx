@@ -149,7 +149,7 @@ const Admin = () => {
 
         {/* Footer */}
         <footer className="mt-12 border-t border-border/50 pt-8 text-center text-sm text-muted-foreground">
-          <p>UrbanIntel Admin Portal • Secure Government Access</p>
+          <p>Urban Intel AI Admin Portal • Secure Government Access</p>
           <p className="mt-2">All decisions are logged and auditable</p>
         </footer>
       </main>
