@@ -29,33 +29,37 @@ const Header = () => {
         </Link>
 
         {/* Navigation */}
-        <nav className="flex items-center gap-2">
+        <nav className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={refreshData}
-            className="gap-2 text-muted-foreground hover:text-foreground"
+            className="gap-2 rounded-lg border-2 border-primary/30 bg-gradient-to-r from-primary/10 to-accent/10 px-4 py-2 text-primary shadow-md transition-all duration-300 hover:border-primary hover:from-primary/20 hover:to-accent/20 hover:shadow-lg hover:scale-105"
           >
             <RefreshCw className="h-4 w-4" />
-            <span className="hidden sm:inline">Refresh Data</span>
+            <span className="hidden sm:inline font-semibold">Refresh Data</span>
           </Button>
 
           {isLoggedIn && isAdmin ? (
             <>
               <Link to="/">
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 rounded-lg border-2 border-accent/50 bg-gradient-to-r from-accent/10 to-info/10 px-4 py-2 text-accent shadow-md transition-all duration-300 hover:border-accent hover:from-accent/20 hover:to-info/20 hover:shadow-lg hover:scale-105"
+                >
                   <LayoutDashboard className="h-4 w-4" />
-                  <span className="hidden sm:inline">Public View</span>
+                  <span className="hidden sm:inline font-semibold">Public View</span>
                 </Button>
               </Link>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={logout}
-                className="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="gap-2 rounded-lg border-2 border-destructive/30 bg-gradient-to-r from-destructive/10 to-red-500/10 px-4 py-2 text-destructive shadow-md transition-all duration-300 hover:border-destructive hover:from-destructive/20 hover:to-red-500/20 hover:shadow-lg hover:scale-105"
               >
                 <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Logout</span>
+                <span className="hidden sm:inline font-semibold">Logout</span>
               </Button>
             </>
           ) : (

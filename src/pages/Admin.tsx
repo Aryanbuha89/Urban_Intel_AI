@@ -14,14 +14,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { PolicyOption } from '@/lib/mockData';
 
 const Admin = () => {
-  const { 
-    isLoggedIn, 
-    currentCrisis, 
-    recommendations, 
+  const {
+    isLoggedIn,
+    currentCrisis,
+    recommendations,
     decisionHistory,
-    approveRecommendation 
+    approveRecommendation
   } = useCityContext();
-  
+
   const [approvedOptionId, setApprovedOptionId] = useState<number | null>(null);
 
   const handleApprove = (option: PolicyOption) => {
@@ -41,7 +41,7 @@ const Admin = () => {
   return (
     <div className="min-h-screen gradient-hero">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8">
         {/* Header */}
         <motion.section
@@ -71,10 +71,25 @@ const Admin = () => {
 
         {/* Main Tabs */}
         <Tabs defaultValue="data" className="mb-12">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="data">📊 City Data</TabsTrigger>
-            <TabsTrigger value="predictions">🤖 AI Predictions</TabsTrigger>
-            <TabsTrigger value="recommendations">✅ Recommendations</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 mb-6 h-14 p-2 bg-gradient-to-r from-muted/50 to-muted/30 rounded-xl border-3 border-primary/40 shadow-lg">
+            <TabsTrigger
+              value="data"
+              className="border-2 border-transparent data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/20 data-[state=active]:to-accent/20 data-[state=active]:border-primary data-[state=active]:shadow-lg data-[state=active]:font-bold transition-all duration-200"
+            >
+              📊 City Data
+            </TabsTrigger>
+            <TabsTrigger
+              value="predictions"
+              className="border-2 border-transparent data-[state=active]:bg-gradient-to-r data-[state=active]:from-accent/20 data-[state=active]:to-info/20 data-[state=active]:border-accent data-[state=active]:shadow-lg data-[state=active]:font-bold transition-all duration-200"
+            >
+              🤖 AI Predictions
+            </TabsTrigger>
+            <TabsTrigger
+              value="recommendations"
+              className="border-2 border-transparent data-[state=active]:bg-gradient-to-r data-[state=active]:from-success/20 data-[state=active]:to-primary/20 data-[state=active]:border-success data-[state=active]:shadow-lg data-[state=active]:font-bold transition-all duration-200"
+            >
+              ✅ Recommendations
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="data">
