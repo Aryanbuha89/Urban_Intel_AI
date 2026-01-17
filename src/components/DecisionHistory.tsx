@@ -44,7 +44,6 @@ const DecisionHistory = ({ decisions }: DecisionHistoryProps) => {
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead className="font-semibold">Alert Type</TableHead>
-              <TableHead className="font-semibold">Decision</TableHead>
               <TableHead className="font-semibold">Approved By</TableHead>
               <TableHead className="font-semibold">Status</TableHead>
               <TableHead className="font-semibold">Date</TableHead>
@@ -63,9 +62,6 @@ const DecisionHistory = ({ decisions }: DecisionHistoryProps) => {
                   {alertLabels[decision.alertType] || decision.alertType}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  Option #{decision.selectedOptionId}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
                   {decision.approvedBy}
                 </TableCell>
                 <TableCell>
@@ -79,7 +75,7 @@ const DecisionHistory = ({ decisions }: DecisionHistoryProps) => {
                   </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {decision.publishedAt 
+                  {decision.publishedAt
                     ? new Date(decision.publishedAt).toLocaleDateString()
                     : '-'
                   }
