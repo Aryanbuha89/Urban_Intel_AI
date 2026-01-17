@@ -130,6 +130,15 @@ export interface AllPredictions {
   health: HealthPrediction;
 }
 
+export interface BackendModelOutputs {
+  waterShortageLevel: number;
+  trafficCongestionLevel: number;
+  foodPriceChangePercent: number;
+  energyPriceChangePercent: number;
+  publicCleanupNeeded: boolean;
+  healthStatus: 0 | 1 | 2 | 3;
+}
+
 // ===========================================
 // POLICY INTERFACES
 // ===========================================
@@ -330,7 +339,7 @@ export const predictFoodPrice = (data: CityData, waterPrediction: WaterSupplyPre
   let reason = '';
   let supplyStatus = 'Normal supply levels';
   const affectedItems: string[] = [];
-  let timeline = 'Next 1-2 months';
+  const timeline = 'Next 1-2 months';
 
   // Low rainfall impact on agriculture
   if (isLowRainfall) {
@@ -535,6 +544,113 @@ export const generateAllPredictions = (data: CityData): AllPredictions => {
   const energyPrice = predictEnergyPrice(data);
   const publicServices = predictPublicServices(data);
   const health = predictHealth(data, traffic);
+
+  return {
+    waterSupply,
+    traffic,
+    foodPrice,
+    energyPrice,
+    publicServices,
+    health,
+  };
+};
+
+export const generateAllPredictionsFromBackend = (
+  data: CityData,
+  outputs: BackendModelOutputs
+): AllPredictions => {
+  const waterLevel = Math.round(outputs.waterShortageLevel);
+  let waterStatus: WaterSupplyPrediction['status'];
+  if (waterLevel >= 80) {
+    waterStatus = 'critical';
+  } else if (waterLevel >= 50) {
+    waterStatus = 'shortage';
+  } else if (waterLevel <= 10) {
+    waterStatus = 'abundant';
+  } else {
+    waterStatus = 'normal';
+  }
+  let shortageDuration = 'N/A';
+  if (waterStatus === 'critical') {
+    shortageDuration = '2-3 months';
+  } else if (waterStatus === 'shortage') {
+    shortageDuration = '1 month';
+  }
+  const waterSupply: WaterSupplyPrediction = {
+    status: waterStatus,
+    shortageLevel: waterLevel,
+    shortageDuration,
+    reason: `Model-predicted water shortage level at ${waterLevel}%`,
+    confidence: 90,
+  };
+
+  const trafficLevel = Math.round(outputs.trafficCongestionLevel);
+  const traffic: TrafficPrediction = {
+    congestionLevel: trafficLevel,
+    affectedAreas: data.transportation.busRoutesCongested,
+    peakHours: '8-10 AM, 5-8 PM',
+    roadsToAvoid: [],
+    reason: `Model-predicted congestion at ${trafficLevel}%`,
+    weatherImpact: `Current rainfall ${data.weather.currentRainfall}mm, temperature ${data.weather.currentTemperature}°C`,
+    busImpact: `${data.transportation.busesOperating}/${data.transportation.totalBuses} buses operating`,
+    confidence: 85,
+  };
+
+  const foodChange = Math.round(outputs.foodPriceChangePercent);
+  const foodPrice: FoodPricePrediction = {
+    priceChangePercent: foodChange,
+    affectedItems: [],
+    reason: foodChange === 0 ? 'Model indicates stable food prices' : `Model predicts ${foodChange}% price change`,
+    timeline: 'Next 1-2 months',
+    supplyStatus: foodChange === 0 ? 'Stable supply levels' : 'Supply levels under stress',
+    confidence: 80,
+  };
+
+  const energyChange = Math.round(outputs.energyPriceChangePercent);
+  const baseRate = 6.5;
+  const predictedRate = Math.round(baseRate * (1 + energyChange / 100) * 100) / 100;
+  const energyPrice: EnergyPricePrediction = {
+    priceChangePercent: energyChange,
+    currentRate: baseRate,
+    predictedRate,
+    reason: `Model predicts ${energyChange}% energy price change`,
+    timeline: 'Next 2-3 months',
+    confidence: 85,
+  };
+
+  const publicCleanupNeeded = outputs.publicCleanupNeeded;
+  const publicServices: PublicServicesPrediction = {
+    cleanupNeeded: publicCleanupNeeded,
+    roadMaintenancePlan: `${data.publicServices.roadsNeedingRepair} road segments flagged by data`,
+    maintenanceTimeline: publicCleanupNeeded ? '15-30 days' : 'Ongoing',
+    cleanupReason: publicCleanupNeeded ? 'Model indicates cleanup required based on service and weather data' : undefined,
+    cleanupDuration: publicCleanupNeeded ? '2 weeks' : undefined,
+    qualityImprovements: publicCleanupNeeded ? ['Cleanup operations', 'Road repairs'] : ['Routine maintenance'],
+    confidence: 88,
+  };
+
+  let healthStatus: HealthPrediction['status'];
+  if (outputs.healthStatus === 3) {
+    healthStatus = 'hazardous';
+  } else if (outputs.healthStatus === 2) {
+    healthStatus = 'unhealthy';
+  } else if (outputs.healthStatus === 1) {
+    healthStatus = 'moderate';
+  } else {
+    healthStatus = 'good';
+  }
+  const health: HealthPrediction = {
+    status: healthStatus,
+    aqi: data.weather.aqi,
+    healthRisk: `Model health risk class ${outputs.healthStatus} with AQI ${data.weather.aqi}`,
+    precautions: [],
+    recommendations: {
+      oddEvenScheme: false,
+      schoolHoliday: false,
+      maskMandate: healthStatus === 'unhealthy' || healthStatus === 'hazardous',
+    },
+    confidence: 85,
+  };
 
   return {
     waterSupply,
