@@ -118,15 +118,15 @@ const Admin = () => {
       section: TSection,
       field: TField
     ) =>
-    (value: string | boolean) => {
-      setWhatIfForm(prev => ({
-        ...prev,
-        [section]: {
-          ...prev[section],
-          [field]: value,
-        },
-      }));
-    };
+      (value: string | boolean) => {
+        setWhatIfForm(prev => ({
+          ...prev,
+          [section]: {
+            ...prev[section],
+            [field]: value,
+          },
+        }));
+      };
 
   const runWhatIfPrediction = async () => {
     const rainfallLast12Months =
@@ -475,12 +475,12 @@ const Admin = () => {
               <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
                 <Card className="border-l-4 border-l-warning">
                   <CardHeader>
-                    <CardTitle className="text-lg">Manual Government Data Input</CardTitle>
+                    <CardTitle className="text-xl font-extrabold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">Manual Government Data Input</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <h3 className="text-sm font-semibold text-foreground">Weather</h3>
+                        <h3 className="text-base font-bold text-sky-500 uppercase tracking-wide">Weather</h3>
                         <div className="space-y-2">
                           <div>
                             <Label htmlFor="whatif-temp">Current temperature (°C)</Label>
@@ -567,7 +567,7 @@ const Admin = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <h3 className="text-sm font-semibold text-foreground">Transportation</h3>
+                        <h3 className="text-base font-bold text-orange-500 uppercase tracking-wide">Transportation</h3>
                         <div className="space-y-2">
                           <div>
                             <Label htmlFor="whatif-buses-operating">Buses operating</Label>
@@ -579,17 +579,6 @@ const Admin = () => {
                               value={whatIfForm.transportation.busesOperating}
                               onChange={e =>
                                 handleWhatIfChange('transportation', 'busesOperating')(e.target.value)
-                              }
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="whatif-total-buses">Total buses</Label>
-                            <Input
-                              id="whatif-total-buses"
-                              type="number"
-                              value={whatIfForm.transportation.totalBuses}
-                              onChange={e =>
-                                handleWhatIfChange('transportation', 'totalBuses')(e.target.value)
                               }
                             />
                           </div>
@@ -707,7 +696,7 @@ const Admin = () => {
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <h3 className="text-sm font-semibold text-foreground">Agriculture</h3>
+                        <h3 className="text-base font-bold text-emerald-600 uppercase tracking-wide">Agriculture</h3>
                         <div className="space-y-2">
                           <div>
                             <Label htmlFor="whatif-crop-yield">Crop yield last year (% of normal)</Label>
@@ -768,7 +757,7 @@ const Admin = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <h3 className="text-sm font-semibold text-foreground">Energy</h3>
+                        <h3 className="text-base font-bold text-yellow-500 uppercase tracking-wide">Energy</h3>
                         <div className="space-y-2">
                           <div>
                             <Label htmlFor="whatif-current-usage">Current usage (MW)</Label>
@@ -840,7 +829,7 @@ const Admin = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <h3 className="text-sm font-semibold text-foreground">Public Services</h3>
+                      <h3 className="text-base font-bold text-rose-500 uppercase tracking-wide">Public Services</h3>
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
                           <div>
