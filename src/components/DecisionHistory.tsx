@@ -59,7 +59,7 @@ const DecisionHistory = ({ decisions }: DecisionHistoryProps) => {
                 className="border-b border-border last:border-0"
               >
                 <TableCell className="font-medium">
-                  {alertLabels[decision.alertType] || decision.alertType}
+                  {decision.title || alertLabels[decision.alertType] || decision.alertType}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {decision.approvedBy}

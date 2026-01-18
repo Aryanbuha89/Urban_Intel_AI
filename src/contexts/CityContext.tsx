@@ -29,9 +29,7 @@ interface CityContextType {
   userProfile: { username: string; role: string } | null;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  logout: () => Promise<void>;
   approveRecommendation: (option: PolicyOption) => Promise<void>;
-  refreshData: () => void;
   refreshData: () => void;
 }
 
@@ -287,9 +285,54 @@ export const CityProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error('Failed to save decision to database:', error);
+      } else {
+        fetchDecisionHistory(); // Refresh list after save
       }
     }
   }, [activeDirective, currentCrisis.type, recommendations, predictions, userProfile]);
+
+  const fetchDecisionHistory = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const { data, error } = await supabase
+      .from('decisions')
+      .select(`
+        *,
+        profiles (username)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    if (error) {
+      console.error('Error fetching decision history:', error);
+      return;
+    }
+
+    if (data) {
+      const mapped: PolicyDecision[] = data.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        category: row.category,
+        alertType: row.category || 'ALERT',
+        aiOptions: [],
+        selectedOptionId: null,
+        status: row.status as any,
+        approvedBy: row.profiles?.username || 'Admin',
+        publishedAt: row.created_at,
+        createdAt: row.created_at,
+        // Keep descriptions if needed, but not in table view
+      }));
+      setDecisionHistory(mapped);
+    }
+  }, []);
+
+  // Fetch history on load if logged in
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchDecisionHistory();
+    }
+  }, [isLoggedIn, fetchDecisionHistory]);
 
   return (
     <CityContext.Provider value={{

@@ -155,6 +155,8 @@ export interface PolicyOption {
 
 export interface PolicyDecision {
   id: string;
+  title?: string;
+  category?: string;
   alertType: string;
   aiOptions: PolicyOption[];
   selectedOptionId: number | null;
