@@ -105,3 +105,25 @@ create policy "Admins can view all decisions"
 create policy "Admins can insert decisions"
   on decisions for insert
   with check ( exists ( select 1 from profiles where id = auth.uid() and role = 'admin' ) );
+
+-- 6. Create Public Feedback Table
+create table public.public_feedback (
+  id uuid default uuid_generate_v4() primary key,
+  directive_id text, -- Changed to text to support both UUIDs and Mock IDs ("1")
+  is_positive boolean default true,
+  message text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- RLS for Public Feedback
+alter table public.public_feedback enable row level security;
+
+-- Allow anyone (anon) to insert feedback
+create policy "Anyone can insert feedback"
+  on public_feedback for insert
+  with check ( true );
+
+-- Only admins can view feedback
+create policy "Admins can view feedback"
+  on public_feedback for select
+  using ( exists ( select 1 from profiles where id = auth.uid() and role = 'admin' ) );

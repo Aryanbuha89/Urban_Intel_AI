@@ -35,7 +35,7 @@ const FeedbackDialog = ({ directiveId }: FeedbackDialogProps) => {
             const { error } = await supabase
                 .from('public_feedback')
                 .insert({
-                    directive_id: directiveId ? Number(directiveId) : null,
+                    directive_id: directiveId ? String(directiveId) : null,
                     is_positive: opinion === 'good',
                     message: message.trim(),
                 });
