@@ -4,10 +4,15 @@ import { FileText, Download, Loader2, Calendar, CheckCircle } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCityContext } from '@/contexts/CityContext';
+import type { PolicyOption } from '@/lib/mockData';
 import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
 
-const ReportGenerator = () => {
+interface ReportGeneratorProps {
+  llmOptions?: PolicyOption[];
+}
+
+const ReportGenerator = ({ llmOptions }: ReportGeneratorProps) => {
   const { data, predictions, recommendations, decisionHistory, userProfile } = useCityContext();
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -188,7 +193,9 @@ const ReportGenerator = () => {
       }
       drawSectionTitle('Strategic Recommendations');
 
-      recommendations.forEach((rec, i) => {
+      const effectiveRecommendations = llmOptions && llmOptions.length > 0 ? llmOptions : recommendations;
+
+      effectiveRecommendations.forEach((rec, i) => {
         if (yPos > pageHeight - 50) {
           pdf.addPage();
           drawHeader();
@@ -262,7 +269,7 @@ const ReportGenerator = () => {
           generatedAt: new Date().toISOString(),
           weather: data.weather,
           predictions: predictions,
-          recommendations: recommendations.map(r => r.title),
+          recommendations: effectiveRecommendations.map(r => r.title),
           decisions: decisionHistory.slice(0, 5).map(d => ({ id: d.id, status: d.status }))
         };
 

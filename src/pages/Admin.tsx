@@ -5,29 +5,112 @@ import { AlertTriangle, Brain, Shield, Sparkles } from 'lucide-react';
 import Header from '@/components/Header';
 import LoginForm from '@/components/LoginForm';
 import CrisisIndicator from '@/components/CrisisIndicator';
-import RecommendationCard from '@/components/RecommendationCard';
 import DecisionHistory from '@/components/DecisionHistory';
+import RecommendationCard from '@/components/RecommendationCard';
 import DataDashboard from '@/components/admin/DataDashboard';
 import PredictionsPanel from '@/components/admin/PredictionsPanel';
 import ReportGenerator from '@/components/admin/ReportGenerator';
 import { useCityContext } from '@/contexts/CityContext';
 import { useMemo, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { PolicyOption } from '@/lib/mockData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import type { PolicyOption, AllPredictions } from '@/lib/mockData';
+
+const getCategoryFromText = (text: string): string => {
+  const lower = text.toLowerCase();
+  if (lower.includes('health')) return 'Public Health';
+  if (lower.includes('cleanup') || lower.includes('waste') || lower.includes('sanitation')) return 'Public Services';
+  if (lower.includes('traffic') || lower.includes('transport') || lower.includes('mobility')) return 'Traffic';
+  if (lower.includes('energy') || lower.includes('electric') || lower.includes('power')) return 'Energy';
+  if (lower.includes('water')) return 'Water Supply';
+  if (lower.includes('food') || lower.includes('price')) return 'Food Prices';
+  return 'General';
+};
+
+const parseLlmTextToOptions = (text: string, predictions: AllPredictions): PolicyOption[] => {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  const items: string[] = [];
+  let current = '';
+  for (const line of lines) {
+    const isBullet = /^\d+\./.test(line) || /^[-•]/.test(line);
+    if (isBullet) {
+      if (current) {
+        items.push(current.trim());
+      }
+      current = line;
+    } else {
+      current = current ? `${current} ${line}` : line;
+    }
+  }
+  if (current) {
+    items.push(current.trim());
+  }
+
+  const filteredItems = items
+    .map(item => item.trim())
+    .filter(item => {
+      const lower = item.toLowerCase();
+      if (lower.startsWith('example:')) return false;
+      if (lower.includes('bullet') || lower.includes('bullets')) return false;
+      if (lower.includes('line') && lower.includes('long')) return false;
+      if (/^[-•]\s*water shortage risk level/i.test(lower)) return false;
+      if (/^[-•]\s*traffic congestion level/i.test(lower)) return false;
+      if (/^[-•]\s*food price change percent/i.test(lower)) return false;
+      if (/^[-•]\s*energy price change percent/i.test(lower)) return false;
+      if (/^[-•]\s*public cleanup needed probability/i.test(lower)) return false;
+      if (/^[-•]\s*health status index/i.test(lower)) return false;
+      return true;
+    });
+
+  const source = filteredItems.length > 0 ? filteredItems : (items.length > 0 ? items : [text]);
+  return source.slice(0, 3).map((raw, index) => {
+    const clean = raw.replace(/^\d+\.\s*/, '').replace(/^[-•]\s*/, '').trim();
+    const firstSentenceEnd = clean.indexOf('.');
+    const titleSource = firstSentenceEnd > 0 ? clean.slice(0, firstSentenceEnd) : clean;
+    const titleWords = titleSource.split(/\s+/).slice(0, 8);
+    const title = titleWords
+      .map(word => (word.length > 1 ? word[0].toUpperCase() + word.slice(1).toLowerCase() : word.toUpperCase()))
+      .join(' ');
+    const category = getCategoryFromText(clean);
+    let impactDetail = `Priority action for ${category}`;
+    if (category === 'Water Supply' && predictions?.waterSupply) {
+      impactDetail = `Water shortage level: ${predictions.waterSupply.shortageLevel}% (status: ${predictions.waterSupply.status})`;
+    } else if (category === 'Traffic' && predictions?.traffic) {
+      impactDetail = `Traffic congestion level: ${predictions.traffic.congestionLevel}% (confidence: ${predictions.traffic.confidence}%)`;
+    } else if (category === 'Food Prices' && predictions?.foodPrice) {
+      impactDetail = `Food price change: ${predictions.foodPrice.priceChangePercent}% (confidence: ${predictions.foodPrice.confidence}%)`;
+    } else if (category === 'Energy' && predictions?.energyPrice) {
+      impactDetail = `Energy price change: ${predictions.energyPrice.priceChangePercent}% (rate: ₹${predictions.energyPrice.currentRate}→₹${predictions.energyPrice.predictedRate})`;
+    } else if (category === 'Public Services' && predictions?.publicServices) {
+      impactDetail = `Cleanup needed: ${predictions.publicServices.cleanupNeeded ? 'Yes' : 'No'} (confidence: ${predictions.publicServices.confidence}%)`;
+    } else if (category === 'Public Health' && predictions?.health) {
+      impactDetail = `Health status: ${predictions.health.status.toUpperCase()} (AQI: ${predictions.health.aqi}, confidence: ${predictions.health.confidence}%)`;
+    }
+    const option: PolicyOption = {
+      id: index + 1,
+      title,
+      description: clean,
+      impact: impactDetail,
+      instructionText: clean,
+      category,
+      basedOn: ['LLM policy advisor', 'Latest model outputs'],
+    };
+    return option;
+  });
+};
 
 const Admin = () => {
   const {
     data,
+    predictions,
     isLoggedIn,
     currentCrisis,
-    recommendations,
     decisionHistory,
+    userProfile,
     approveRecommendation,
-    userProfile
   } = useCityContext();
 
   const [approvedOptionId, setApprovedOptionId] = useState<number | null>(null);
@@ -98,6 +181,13 @@ const Admin = () => {
     healthStatus: null,
     publicCleanupNeeded: null,
   });
+  const [llmText, setLlmText] = useState<string | null>(null);
+  const [llmLoading, setLlmLoading] = useState(false);
+  const [llmError, setLlmError] = useState<string | null>(null);
+  const [llmOptions, setLlmOptions] = useState<PolicyOption[]>([]);
+  const [whatIfLlmText, setWhatIfLlmText] = useState<string | null>(null);
+  const [whatIfLlmLoading, setWhatIfLlmLoading] = useState(false);
+  const [whatIfLlmError, setWhatIfLlmError] = useState<string | null>(null);
 
   const handleApprove = async (option: PolicyOption) => {
     await approveRecommendation(option);
@@ -494,6 +584,104 @@ const Admin = () => {
     }
   };
 
+  const handleGenerateLlmRecommendations = async () => {
+    setLlmLoading(true);
+    setLlmError(null);
+    setApprovedOptionId(null);
+
+    try {
+      const payload = {
+        waterShortageLevel: predictions.waterSupply.shortageLevel,
+        trafficCongestionLevel: predictions.traffic.congestionLevel,
+        foodPriceChangePercent: predictions.foodPrice.priceChangePercent,
+        energyPriceChangePercent: predictions.energyPrice.priceChangePercent,
+        publicCleanupNeeded: typeof predictions.publicServices.cleanupNeeded === 'number'
+          ? predictions.publicServices.cleanupNeeded
+          : predictions.publicServices.cleanupNeeded
+            ? 70
+            : 10,
+        healthStatus: predictions.health.status === 'good'
+          ? 25
+          : predictions.health.status === 'moderate'
+            ? 50
+            : predictions.health.status === 'unhealthy'
+              ? 75
+              : 90,
+      };
+
+      const response = await fetch(`${getApiBaseUrl()}/llm-recommendations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`LLM recommendations request failed (${response.status})`);
+      }
+
+      const json = await response.json() as { recommendations: string };
+      setLlmText(json.recommendations);
+      setLlmOptions(parseLlmTextToOptions(json.recommendations, predictions));
+    } catch (error) {
+      setLlmError(
+        error instanceof Error
+          ? error.message
+          : 'LLM recommendations request error. Please verify backend is running.'
+      );
+      setLlmText(null);
+      setLlmOptions([]);
+    } finally {
+      setLlmLoading(false);
+    }
+  };
+
+  const handleGenerateWhatIfLlmRecommendations = async () => {
+    setWhatIfLlmLoading(true);
+    setWhatIfLlmError(null);
+    setWhatIfLlmText(null);
+
+    try {
+      if (whatIfOutputs.waterShortageLevel === null) {
+        throw new Error("Please run the predictions first to generate policies.");
+      }
+
+      const payload = {
+        waterShortageLevel: whatIfOutputs.waterShortageLevel ?? 0,
+        trafficCongestionLevel: whatIfOutputs.trafficCongestionLevel ?? 0,
+        foodPriceChangePercent: whatIfOutputs.foodPriceChangePercent ?? 0,
+        energyPriceChangePercent: whatIfOutputs.energyPriceChangePercent ?? 0,
+        publicCleanupNeeded: whatIfOutputs.publicCleanupNeeded ?? 0,
+        healthStatus: whatIfOutputs.healthStatus ?? 0,
+      };
+
+      const response = await fetch(`${getApiBaseUrl()}/llm-recommendations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`LLM recommendations request failed (${response.status})`);
+      }
+
+      const json = await response.json() as { recommendations: string };
+      setWhatIfLlmText(json.recommendations);
+    } catch (error) {
+      setWhatIfLlmError(
+        error instanceof Error
+          ? error.message
+          : 'LLM recommendations request error. Please verify backend is running.'
+      );
+      setWhatIfLlmText(null);
+    } finally {
+      setWhatIfLlmLoading(false);
+    }
+  };
+
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen gradient-hero">
@@ -572,7 +760,6 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="recommendations">
-            {/* AI Decision Hub */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -594,27 +781,68 @@ const Admin = () => {
                 </div>
               </div>
 
-              {/* Recommendation Cards */}
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {recommendations.map((option, index) => (
-                  <RecommendationCard
-                    key={option.id}
-                    option={option}
-                    index={index}
-                    onApprove={handleApprove}
-                    isApproved={approvedOptionId === option.id}
-                  />
-                ))}
-              </div>
+              <Card className="border-l-4 border-l-primary">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2">
+                      <Brain className="h-5 w-5 text-primary" />
+                      <span>LLM Policy Advisor (Local)</span>
+                    </span>
+                    <Button
+                      size="sm"
+                      onClick={handleGenerateLlmRecommendations}
+                      disabled={llmLoading}
+                    >
+                      {llmLoading ? 'Generating...' : 'Generate LLM recommendations'}
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Uses the current AI predictions as input to a large language model
+                    to propose multiple coordinated policy actions for the city.
+                  </p>
+                  {llmError && (
+                    <p className="text-xs text-red-500">
+                      {llmError}
+                    </p>
+                  )}
+                  {llmText && (
+                    <div className="rounded-md bg-muted p-3 text-sm whitespace-pre-line">
+                      {llmText}
+                    </div>
+                  )}
+                  {!llmText && !llmError && (
+                    <p className="text-xs text-muted-foreground">
+                      Click the button to generate 2–3 high-impact recommendations based on the latest model outputs.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {llmOptions.length > 0 && (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {llmOptions.map((option, index) => (
+                    <RecommendationCard
+                      key={option.id}
+                      option={option}
+                      index={index}
+                      onApprove={handleApprove}
+                      isApproved={approvedOptionId === option.id}
+                    />
+                  ))}
+                </div>
+              )}
 
               {/* Report Generator */}
               <div className="mt-8">
-                <ReportGenerator />
+                <ReportGenerator llmOptions={llmOptions} />
               </div>
             </motion.div>
           </TabsContent>
 
           <TabsContent value="what-if">
+
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -642,6 +870,7 @@ const Admin = () => {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-2">
+                      {/* Weather Inputs */}
                       <div className="space-y-2">
                         <h3 className="text-base font-bold text-sky-500 uppercase tracking-wide">Weather</h3>
                         <div className="space-y-2">
@@ -1127,158 +1356,195 @@ const Admin = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="border-l-4 border-l-info h-fit">
-                  <CardHeader>
-                    <CardTitle className="text-lg">What If? Model Outputs</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      These values come directly from the trained ML models, using the manual data
-                      you entered. Judges can change inputs and rerun predictions to confirm live
-                      model behavior.
-                    </p>
-                    <div className="space-y-3">
-                      <div className="rounded-lg bg-primary/5 p-3">
-                        <div className="text-xs font-semibold text-primary uppercase tracking-wide">
-                          Water Shortage Model
+                <div className="space-y-6">
+                  <Card className="border-l-4 border-l-info h-fit">
+                    <CardHeader>
+                      <CardTitle className="text-lg">What If? Model Outputs</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        These values come directly from the trained ML models, using the manual data
+                        you entered. Judges can change inputs and rerun predictions to confirm live
+                        model behavior.
+                      </p>
+                      <div className="space-y-3">
+                        <div className="rounded-lg bg-primary/5 p-3">
+                          <div className="text-xs font-semibold text-primary uppercase tracking-wide">
+                            Water Shortage Model
+                          </div>
+                          <div className="mt-1 text-2xl font-bold">
+                            {whatIfOutputs.waterShortageLevel !== null
+                              ? `${Math.round(whatIfOutputs.waterShortageLevel)}%`
+                              : '—'}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Higher value means more severe shortage risk.
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={handleRunWaterPrediction}
+                            disabled={whatIfLoadingWater}
+                          >
+                            {whatIfLoadingWater ? 'Running…' : 'Run water prediction'}
+                          </Button>
                         </div>
-                        <div className="mt-1 text-2xl font-bold">
-                          {whatIfOutputs.waterShortageLevel !== null
-                            ? `${Math.round(whatIfOutputs.waterShortageLevel)}%`
-                            : '—'}
+                        <div className="rounded-lg bg-accent/5 p-3">
+                          <div className="text-xs font-semibold text-accent uppercase tracking-wide">
+                            Traffic Congestion Model
+                          </div>
+                          <div className="mt-1 text-2xl font-bold">
+                            {whatIfOutputs.trafficCongestionLevel !== null
+                              ? `${Math.round(whatIfOutputs.trafficCongestionLevel)}%`
+                              : '—'}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Predicted citywide congestion level based on weather and transport load.
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={handleRunTrafficPrediction}
+                            disabled={whatIfLoadingTraffic}
+                          >
+                            {whatIfLoadingTraffic ? 'Running…' : 'Run traffic prediction'}
+                          </Button>
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Higher value means more severe shortage risk.
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-2"
-                          onClick={handleRunWaterPrediction}
-                          disabled={whatIfLoadingWater}
-                        >
-                          {whatIfLoadingWater ? 'Running…' : 'Run water prediction'}
-                        </Button>
+                        <div className="rounded-lg bg-warning/5 p-3">
+                          <div className="text-xs font-semibold text-warning uppercase tracking-wide">
+                            Food Price Model
+                          </div>
+                          <div className="mt-1 text-2xl font-bold">
+                            {whatIfOutputs.foodPriceChangePercent !== null
+                              ? `${Math.round(whatIfOutputs.foodPriceChangePercent)}%`
+                              : '—'}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Expected change in food prices given rainfall, stocks and logistics.
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={handleRunFoodPrediction}
+                            disabled={whatIfLoadingFood}
+                          >
+                            {whatIfLoadingFood ? 'Running…' : 'Run food price prediction'}
+                          </Button>
+                        </div>
+                        <div className="rounded-lg bg-success/5 p-3">
+                          <div className="text-xs font-semibold text-success uppercase tracking-wide">
+                            Energy Price Model
+                          </div>
+                          <div className="mt-1 text-2xl font-bold">
+                            {whatIfOutputs.energyPriceChangePercent !== null
+                              ? `${Math.round(whatIfOutputs.energyPriceChangePercent)}%`
+                              : '—'}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Predicted adjustment in energy tariffs from current load and stability.
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={handleRunEnergyPrediction}
+                            disabled={whatIfLoadingEnergy}
+                          >
+                            {whatIfLoadingEnergy ? 'Running…' : 'Run energy price prediction'}
+                          </Button>
+                        </div>
+                        <div className="rounded-lg bg-destructive/5 p-3">
+                          <div className="text-xs font-semibold text-destructive uppercase tracking-wide">
+                            Health Status Model
+                          </div>
+                          <div className="mt-1 text-2xl font-bold">
+                            {whatIfOutputs.healthStatus !== null
+                              ? `${Math.round(whatIfOutputs.healthStatus)}%`
+                              : '—'}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Higher value means more severe population health risk (0% to 100%).
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={handleRunHealthPrediction}
+                            disabled={whatIfLoadingHealth}
+                          >
+                            {whatIfLoadingHealth ? 'Running…' : 'Run health prediction'}
+                          </Button>
+                        </div>
+                        <div className="rounded-lg bg-info/5 p-3">
+                          <div className="text-xs font-semibold text-info uppercase tracking-wide">
+                            Public Cleanup Model
+                          </div>
+                          <div className="mt-1 text-2xl font-bold">
+                            {whatIfOutputs.publicCleanupNeeded !== null
+                              ? `${Math.round(whatIfOutputs.publicCleanupNeeded)}%`
+                              : '—'}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Probability that major cleanup operations should be triggered (0% to 100%).
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={handleRunPublicServicesPrediction}
+                            disabled={whatIfLoadingPublicServices}
+                          >
+                            {whatIfLoadingPublicServices ? 'Running…' : 'Run cleanup prediction'}
+                          </Button>
+                        </div>
                       </div>
-                      <div className="rounded-lg bg-accent/5 p-3">
-                        <div className="text-xs font-semibold text-accent uppercase tracking-wide">
-                          Traffic Congestion Model
-                        </div>
-                        <div className="mt-1 text-2xl font-bold">
-                          {whatIfOutputs.trafficCongestionLevel !== null
-                            ? `${Math.round(whatIfOutputs.trafficCongestionLevel)}%`
-                            : '—'}
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Predicted citywide congestion level based on weather and transport load.
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-l-4 border-l-purple-500 h-fit">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Brain className="h-5 w-5 text-purple-500" />
+                        What If? AI Policy
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Generate policy recommendations based on the hypothentical scenario above.
+                      </p>
+
+                      <Button
+                        size="sm"
+                        onClick={handleGenerateWhatIfLlmRecommendations}
+                        disabled={whatIfLlmLoading}
+                        className="w-full"
+                      >
+                        {whatIfLlmLoading ? 'Generating Policies...' : 'Generate Policies'}
+                      </Button>
+
+                      {whatIfLlmError && (
+                        <p className="text-xs text-red-500">
+                          {whatIfLlmError}
                         </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-2"
-                          onClick={handleRunTrafficPrediction}
-                          disabled={whatIfLoadingTraffic}
-                        >
-                          {whatIfLoadingTraffic ? 'Running…' : 'Run traffic prediction'}
-                        </Button>
-                      </div>
-                      <div className="rounded-lg bg-warning/5 p-3">
-                        <div className="text-xs font-semibold text-warning uppercase tracking-wide">
-                          Food Price Model
+                      )}
+
+                      {whatIfLlmText && (
+                        <div className="rounded-md bg-muted p-3 text-xs whitespace-pre-line">
+                          {whatIfLlmText}
                         </div>
-                        <div className="mt-1 text-2xl font-bold">
-                          {whatIfOutputs.foodPriceChangePercent !== null
-                            ? `${Math.round(whatIfOutputs.foodPriceChangePercent)}%`
-                            : '—'}
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Expected change in food prices given rainfall, stocks and logistics.
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-2"
-                          onClick={handleRunFoodPrediction}
-                          disabled={whatIfLoadingFood}
-                        >
-                          {whatIfLoadingFood ? 'Running…' : 'Run food price prediction'}
-                        </Button>
-                      </div>
-                      <div className="rounded-lg bg-success/5 p-3">
-                        <div className="text-xs font-semibold text-success uppercase tracking-wide">
-                          Energy Price Model
-                        </div>
-                        <div className="mt-1 text-2xl font-bold">
-                          {whatIfOutputs.energyPriceChangePercent !== null
-                            ? `${Math.round(whatIfOutputs.energyPriceChangePercent)}%`
-                            : '—'}
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Predicted adjustment in energy tariffs from current load and stability.
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-2"
-                          onClick={handleRunEnergyPrediction}
-                          disabled={whatIfLoadingEnergy}
-                        >
-                          {whatIfLoadingEnergy ? 'Running…' : 'Run energy price prediction'}
-                        </Button>
-                      </div>
-                      <div className="rounded-lg bg-destructive/5 p-3">
-                        <div className="text-xs font-semibold text-destructive uppercase tracking-wide">
-                          Health Status Model
-                        </div>
-                        <div className="mt-1 text-2xl font-bold">
-                          {whatIfOutputs.healthStatus !== null
-                            ? `${Math.round(whatIfOutputs.healthStatus)}%`
-                            : '—'}
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Higher value means more severe population health risk (0% to 100%).
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-2"
-                          onClick={handleRunHealthPrediction}
-                          disabled={whatIfLoadingHealth}
-                        >
-                          {whatIfLoadingHealth ? 'Running…' : 'Run health prediction'}
-                        </Button>
-                      </div>
-                      <div className="rounded-lg bg-info/5 p-3">
-                        <div className="text-xs font-semibold text-info uppercase tracking-wide">
-                          Public Cleanup Model
-                        </div>
-                        <div className="mt-1 text-2xl font-bold">
-                          {whatIfOutputs.publicCleanupNeeded !== null
-                            ? `${Math.round(whatIfOutputs.publicCleanupNeeded)}%`
-                            : '—'}
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Probability that major cleanup operations should be triggered (0% to 100%).
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-2"
-                          onClick={handleRunPublicServicesPrediction}
-                          disabled={whatIfLoadingPublicServices}
-                        >
-                          {whatIfLoadingPublicServices ? 'Running…' : 'Run cleanup prediction'}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </motion.div>
           </TabsContent>

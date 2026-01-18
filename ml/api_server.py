@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from typing import Literal
 
@@ -7,18 +9,9 @@ import pandas as pd
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import re
 
 from ml.weather_data_pipeline import fetch_openweather_sample
-
-
-class WeatherIn(BaseModel):
-    currentTemperature: float
-    humidity: float
-    windSpeed: float
-    currentRainfall: float
-    rainfallLast12Months: list[float]
-    recentStormOrFlood: bool
-    aqi: float
 
 
 class TransportationIn(BaseModel):
@@ -52,6 +45,16 @@ class PublicServicesIn(BaseModel):
     pendingMaintenanceTasks: int
 
 
+class WeatherIn(BaseModel):
+    currentTemperature: float
+    humidity: float
+    windSpeed: float
+    currentRainfall: float
+    rainfallLast12Months: list[float]
+    recentStormOrFlood: bool
+    aqi: float
+
+
 class CityInput(BaseModel):
     weather: WeatherIn
     transportation: TransportationIn
@@ -69,11 +72,26 @@ class ModelOutputs(BaseModel):
     healthStatus: float
 
 
+class LlmRecommendationsIn(BaseModel):
+    waterShortageLevel: float
+    trafficCongestionLevel: float
+    foodPriceChangePercent: float
+    energyPriceChangePercent: float
+    publicCleanupNeeded: float
+    healthStatus: float
+
+
+class LlmRecommendationsOut(BaseModel):
+    recommendations: str
+
+
 app = FastAPI()
 
 origins = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 app.add_middleware(
@@ -302,3 +320,268 @@ def predict_all(city: CityInput) -> ModelOutputs:
         publicCleanupNeeded=public_cleanup_needed,
         healthStatus=health_status_pred,
     )
+
+
+
+
+
+
+
+
+def _build_llm_prompt(inputs: LlmRecommendationsIn) -> list[dict[str, str]]:
+    # 1. Identify critical risks
+    critical_contexts = []
+    if inputs.healthStatus > 50:
+         critical_contexts.append(f"Air Quality is HAZARDOUS")
+    if inputs.waterShortageLevel > 50:
+        critical_contexts.append(f"Water Shortage is SEVERE")
+    if inputs.publicCleanupNeeded > 50:
+         critical_contexts.append(f"Sanitation is POOR")
+    if inputs.trafficCongestionLevel > 50:
+        critical_contexts.append(f"Traffic is CRITICAL")
+    
+    # Fallback
+    if not critical_contexts:
+        critical_contexts.append("Conditions are stable")
+
+    context_str = ", ".join(critical_contexts)
+
+    system_msg = (
+        "You are an Emergency Broadcast System. Issue EXACTLY 3 urgent public advisories based on the provided status.\n"
+        "Prioritize risks: Health > Water > Food > Traffic.\n"
+        "Do not output more than 5 lines.\n\n"
+        "Example Input: Status: Air Quality is HAZARDOUS, Water Shortage is SEVERE, Food Price Increase is SEVERE, Traffic is CRITICAL\n"
+        "Example Output:\n"
+        "- HEALTH EMERGENCY: Air quality is toxic; schools closed and N95 masks mandatory.\n"
+        "- WATER RATIONING: Supply cut to 2 hours daily; water tanker schedule activated.\n"
+        "- FOOD PRICE INCREASE: Food prices have surged by 20%; rationing implemented.\n"
+        "- TRAVEL ADVISORY: Downtown gridlocked due to smog visibility; avoid travel.\n\n"
+        "Example Input: Status: Conditions are stable\n"
+        "Example Output:\n"
+        "- MONITORING: City systems functioning within normal parameters.\n"
+        "- ADVISORY: Continue standard conservation practices.\n"
+        "- TRAFFIC: Normal flow reported on main arteries."
+    )
+    user_msg = (
+        f"Status: {context_str}\n"
+        "Output 3 bullet points now:"
+    )
+    return [
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": user_msg}
+    ]
+
+
+LOCAL_LLM_MODEL_ID = os.getenv("LOCAL_LLM_MODEL_ID", "TinyLlama/TinyLlama-1.1B-Chat-v1.0")
+
+_local_llm_model = None
+_local_llm_tokenizer = None
+_local_llm_error: str | None = None
+
+
+def _ensure_local_llm_loaded() -> bool:
+    global _local_llm_model, _local_llm_tokenizer, _local_llm_error
+    print("DEBUG: _ensure_local_llm_loaded called.")
+    if _local_llm_model is not None and _local_llm_tokenizer is not None:
+        return True
+    try:
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+    except Exception as exc:
+        print(f"DEBUG: Import failed: {exc}")
+        _local_llm_error = str(exc)
+        return False
+    model_id = LOCAL_LLM_MODEL_ID
+    print(f"DEBUG: Loading model {model_id}...")
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+        if torch.cuda.is_available():
+            print("DEBUG: CUDA available, loading to CUDA explicitly")
+            model = AutoModelForCausalLM.from_pretrained(
+                model_id,
+                torch_dtype=torch.float16,
+            ).to("cuda")
+        else:
+            print("DEBUG: Loading on CPU")
+            model = AutoModelForCausalLM.from_pretrained(model_id)
+    except Exception as exc:
+        print(f"DEBUG: Model fail to load: {exc}")
+        import traceback
+        traceback.print_exc()
+        _local_llm_error = str(exc)
+        return False
+    _local_llm_model = model
+    _local_llm_tokenizer = tokenizer
+    print("DEBUG: Model loaded successfully.")
+    return True
+
+
+def _call_local_llm(messages: list[dict[str, str]] | str) -> str:
+    import torch
+
+    if not _ensure_local_llm_loaded():
+        raise RuntimeError("Local LLM is not available")
+    assert _local_llm_model is not None
+    assert _local_llm_tokenizer is not None
+    tokenizer = _local_llm_tokenizer
+    model = _local_llm_model
+    
+    if isinstance(messages, str):
+        prompt = messages
+    else:
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        
+    inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=1024)
+    if torch.cuda.is_available():
+        inputs = {k: v.to(model.device) for k, v in inputs.items()}
+    output_ids = model.generate(
+        **inputs,
+        max_new_tokens=256,
+        temperature=0.7,
+        do_sample=True,
+        pad_token_id=tokenizer.eos_token_id,
+    )
+    generated_ids = output_ids[0][inputs["input_ids"].shape[1] :]
+    text = tokenizer.decode(generated_ids, skip_special_tokens=True)
+    return text.strip()
+
+
+
+
+
+def _is_valid_llm_recommendations(text: str) -> bool:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    bullet_lines = [
+        line
+        for line in lines
+        if line.startswith(("-", "•")) or re.match(r"^\d+\.", line)
+    ]
+    if len(bullet_lines) < 2:
+        print(f"DEBUG: Validation failed - Not enough bullets. Found {len(bullet_lines)}.")
+        return False
+    meta_keywords = ["bullet", "bullets", "line", "lines", "format", "example", "instruction"]
+    for line in bullet_lines:
+        if any(k in line.lower() for k in meta_keywords):
+             print(f"DEBUG: Validation failed - Meta keyword found in line: {line}")
+             return False
+    return True
+
+
+def _build_rule_based_recommendations(inputs: LlmRecommendationsIn) -> str:
+    print("DEBUG: Using RULE-BASED fallback recommendations.")
+    items: list[str] = []
+    if inputs.waterShortageLevel >= 70:
+        items.append(
+            f"WATER EMERGENCY: With shortage risk near {inputs.waterShortageLevel:.0f}%, enforce rationing, prioritize hospitals and vulnerable settlements, and deploy leak-fixing crews within 24 hours."
+        )
+    elif inputs.waterShortageLevel >= 40:
+        items.append(
+            f"WATER CONSERVATION: With shortage risk around {inputs.waterShortageLevel:.0f}%, launch citywide conservation campaign, restrict non-essential use, and fast-track supply network inspections."
+        )
+    if inputs.trafficCongestionLevel >= 70:
+        items.append(
+            f"TRAFFIC MANAGEMENT: With congestion near {inputs.trafficCongestionLevel:.0f}%, activate dynamic signal plans, divert heavy vehicles outside peak hours, and deploy traffic marshals at hotspots."
+        )
+    elif inputs.trafficCongestionLevel >= 40:
+        items.append(
+            f"MOBILITY OPTIMIZATION: With congestion around {inputs.trafficCongestionLevel:.0f}%, promote staggered office timings, increase bus frequency on congested corridors, and improve last-mile options."
+        )
+    if inputs.publicCleanupNeeded >= 60:
+        items.append(
+            f"CITY CLEANUP DRIVE: With cleanup risk near {inputs.publicCleanupNeeded:.0f}%, schedule intensive cleanup and repair in high-risk wards, coordinate sanitation, roads, and drainage teams with a clear 7–14 day timeline."
+        )
+    if inputs.healthStatus <= 40:
+        items.append(
+            f"PUBLIC HEALTH ALERT: With health risk index near {inputs.healthStatus:.0f}, scale up clinic capacity, issue air and water quality advisories, and mobilize outreach in high-risk neighborhoods."
+        )
+    if inputs.energyPriceChangePercent >= 10 or inputs.energyPriceChangePercent <= -5:
+        if inputs.energyPriceChangePercent >= 10:
+            items.append(
+                f"ENERGY STABILITY PLAN: With tariffs rising about {inputs.energyPriceChangePercent:.1f}%, announce time-of-day tariffs, incentivize large consumers to shift loads off-peak, and expand demand response programs."
+            )
+        else:
+            items.append(
+                f"ENERGY STABILITY PLAN: With tariffs falling about {abs(inputs.energyPriceChangePercent):.1f}%, lock in lower bulk procurements while protecting low-income households from volatility."
+            )
+    if inputs.foodPriceChangePercent >= 8:
+        items.append(
+            f"FOOD PRICE CONTAINMENT: With staple prices rising about {inputs.foodPriceChangePercent:.1f}%, release buffer stocks, support wholesale markets, and expand targeted subsidies for low-income households."
+        )
+    elif inputs.foodPriceChangePercent <= -5:
+        items.append(
+            f"FOOD MARKET STABILIZATION: With prices dropping about {abs(inputs.foodPriceChangePercent):.1f}%, stabilize farmer incomes through procurement and storage while keeping retail prices predictable."
+        )
+    if not items:
+        items = [
+            "COORDINATION CELL: Maintain an integrated command center linking water, transport, health, and disaster management for rapid decisions.",
+            "DATA-DRIVEN MONITORING: Track key indicators daily and trigger predefined playbooks when thresholds are crossed.",
+            "COMMUNITY OUTREACH: Use multilingual alerts and ward-level meetings to keep residents informed and engaged in resilience actions.",
+        ]
+    lines = []
+
+    for text in items[:3]:
+        lines.append(f"- {text}")
+    return "\n".join(lines)
+
+
+
+def _clean_llm_output(text: str) -> str:
+    lines = text.splitlines()
+    cleaned_lines = []
+    for line in lines:
+        l = line.strip()
+        if not l:
+            continue
+        # STOP processing if we see prompt artifacts
+        if "example input" in l.lower() or "example output" in l.lower():
+            break
+            
+        # Remove lines that look like meta-commentary
+        if l.lower().startswith(("example:", "note:", "here are", "sure", "output:", "status:")):
+            continue
+        # Remove lines that are just "Water Conservation:" without content
+        if l.endswith(":") and len(l.split()) < 5:
+            continue
+            
+        cleaned_lines.append(line)
+        
+        # STRICTLY LIMIT to 3 lines
+        if len(cleaned_lines) >= 3:
+            break
+            
+    return "\n".join(cleaned_lines)
+
+
+@app.post("/llm-recommendations", response_model=LlmRecommendationsOut)
+def llm_recommendations(inputs: LlmRecommendationsIn) -> LlmRecommendationsOut:
+    print("DEBUG: Received LLM recommendation request.")
+    prompt = _build_llm_prompt(inputs)
+    try:
+        text = _call_local_llm(prompt)
+        print("DEBUG: Raw LLM Output start ---")
+        print(text)
+        print("DEBUG: Raw LLM Output end ---")
+        
+        # Clean the output first
+        text = _clean_llm_output(text)
+        print("DEBUG: Cleaned LLM Output start ---")
+        print(text)
+        print("DEBUG: Cleaned LLM Output end ---")
+
+        if not isinstance(text, str) or not text.strip():
+             print("DEBUG: Validation failed - Empty or non-string output.")
+             text = _build_rule_based_recommendations(inputs)
+        elif not _is_valid_llm_recommendations(text):
+             print("DEBUG: Validation failed - _is_valid_llm_recommendations returned False.")
+             text = _build_rule_based_recommendations(inputs)
+        else:
+             print("DEBUG: Output is VALID.")
+
+    except Exception as e:
+        print(f"DEBUG: Exception during LLM generation: {e}")
+        import traceback
+        traceback.print_exc()
+        text = _build_rule_based_recommendations(inputs)
+    return LlmRecommendationsOut(recommendations=text)
+
+
