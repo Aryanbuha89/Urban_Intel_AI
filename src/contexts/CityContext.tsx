@@ -244,88 +244,104 @@ export const CityProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
   }, []);
 
-  const approveRecommendation = useCallback(async (option: PolicyOption) => {
-    // Local state update (optimistic)
-    if (activeDirective) {
-      setDirectiveHistory(prev => [{
-        id: crypto.randomUUID(),
-        text: activeDirective,
-        timestamp: new Date().toISOString(),
-        isActive: false,
-        category: option.category,
-      }, ...prev.slice(0, 9)]);
-    }
-
-    setActiveDirective(option.instructionText);
-
-    const newDecision: PolicyDecision = {
-      id: crypto.randomUUID(),
-      alertType: currentCrisis.type,
-      aiOptions: recommendations,
-      selectedOptionId: option.id,
-      status: 'PUBLISHED',
-      approvedBy: 'Admin',
-      publishedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      predictions,
-    };
-
-    setDecisionHistory(prev => [newDecision, ...prev]);
-
-    // Save to Database
-    if (userProfile?.role === 'admin') {
-      const { error } = await supabase.from('decisions').insert({
-        title: option.title,
-        category: option.category,
-        description: option.description,
-        impact: option.impact,
-        status: 'PUBLISHED',
-        admin_id: (await supabase.auth.getUser()).data.user?.id
-      });
-
-      if (error) {
-        console.error('Failed to save decision to database:', error);
-      } else {
-        fetchDecisionHistory(); // Refresh list after save
-      }
-    }
-  }, [activeDirective, currentCrisis.type, recommendations, predictions, userProfile]);
-
+  // Fetch history on load if logged in OR always for public view support
+  // Modified to allow public fetching if RLS allows it (Policy added in SQL)
   const fetchDecisionHistory = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
+    // Fetch top 4 to get Active + 3 History items
     const { data, error } = await supabase
       .from('decisions')
       .select(`
-        *,
-        profiles (username)
-      `)
+          *,
+          profiles (username)
+        `)
       .order('created_at', { ascending: false })
-      .limit(3);
+      .limit(4);
 
     if (error) {
       console.error('Error fetching decision history:', error);
       return;
     }
 
-    if (data) {
-      const mapped: PolicyDecision[] = data.map((row: any) => ({
+    if (data && data.length > 0) {
+      // Map DB response to PolicyDecision type
+      const mappedDecisions: PolicyDecision[] = data.map((row: any) => ({
         id: row.id,
         title: row.title,
         category: row.category,
         alertType: row.category || 'ALERT',
-        aiOptions: [],
+        aiOptions: [], // Not stored in DB fully, placeholder
         selectedOptionId: null,
         status: row.status as any,
         approvedBy: row.profiles?.username || 'Admin',
         publishedAt: row.created_at,
         createdAt: row.created_at,
-        // Keep descriptions if needed, but not in table view
+        predictions: undefined
       }));
-      setDecisionHistory(mapped);
+
+      setDecisionHistory(mappedDecisions);
+
+      // Logic: 
+      // Index 0 is "Active Now"
+      // Index 1, 2, 3 are "History"
+
+      const latest = data[0];
+      setActiveDirective(latest.directive_text || latest.description);
+
+      const historyItems = data.slice(1).map((row: any) => ({
+        id: row.id,
+        text: row.directive_text || row.description,
+        timestamp: row.created_at,
+        isActive: false,
+        category: row.category
+      }));
+
+      setDirectiveHistory(historyItems);
+    } else {
+      // Fallback or empty state
+      setActiveDirective(null);
+      setDirectiveHistory([]);
     }
   }, []);
+
+  // Call fetch on mount
+  useEffect(() => {
+    fetchDecisionHistory();
+
+    // Optional: Subscribe to realtime changes
+    const channel = supabase
+      .channel('public:decisions')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'decisions' }, (payload) => {
+        fetchDecisionHistory();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchDecisionHistory]);
+
+  const approveRecommendation = useCallback(async (option: PolicyOption) => {
+    if (userProfile?.role !== 'admin') return;
+
+    const user = (await supabase.auth.getUser()).data.user;
+
+    const { error } = await supabase.from('decisions').insert({
+      title: option.title,
+      category: option.category,
+      description: option.description,
+      impact: option.impact,
+      status: 'PUBLISHED',
+      directive_text: option.instructionText, // Store the actual directive text
+      admin_id: user?.id
+    });
+
+    if (error) {
+      console.error('Failed to save decision to database:', error);
+    } else {
+      // Real-time subscription will trigger refresh, or manual refresh:
+      fetchDecisionHistory();
+    }
+  }, [userProfile]);
 
   // Fetch history on load if logged in
   useEffect(() => {
