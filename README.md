@@ -4,146 +4,115 @@
 
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-black?style=for-the-badge&logo=github)](https://github.com/Aryanbuha89/Hell_Boys)
 
-**Urban Intel AI** is a next-generation administrative platform designed for smart city governance. Unlike traditional dashboards that only *display* data, this system *understands* the causal relationships between urban sectors. It uses a **Cascading AI Model** to predict how a crisis in one area (e.g., severe weather) triggers risks in others (e.g., traffic congestion, energy grid instability, and public health).
-
-> **New Feature:** We have integrated **Mistral AI 7B** to function as a "Policy Generative Engine", taking inputs from 6 specialized base models to generate human-readable, strategic policy recommendations.
+> **Contributor Note:** This repository allows access to [IEEE AUSB](https://github.com/IEEE-Ahmedabad-University-SB-Official).
 
 ---
 
-## 🚀 Key Features
+## 📌 Project Overview & Features
 
-### 🧠 1. Evidence of "Cascading Intelligence"
-The core innovation is the modeling of chain reactions.
-*   **Logic:** `Rain > 50mm` → `Traffic Efficiency Drops` → `Pollution Rises` → `Health Risk Increases`.
-*   **Implementation:** Parallel specialized ML models run in parallel, and their outputs are fed into a meta-model logic layer.
+**Urban Intel AI** is a next-generation administrative platform designed for smart city governance. It goes beyond simple data visualization by using **Cascading AI Models** to understand how a crisis in one sector (e.g., heavy rainfall) triggers risks in others (e.g., traffic jams, food price hikes).
 
-### 🤖 2. Mistral AI 7B Policy Engine
-We use an LLM (Mistral 7B) to synthesize complex numerical predictions into actionable government directives.
-*   **Input:** Predictions from Weather, Water, Traffic, Food, Energy, and Health models.
-*   **Output:** Strategic policy text (e.g., *"Deploy flood barriers in Sector 4 and reroute heavy traffic via Highway 9 to prevent gridlock."*)
-
-### 🧪 3. "What-If" Scenario Simulation Engine
-Judges can interactively test the model's robustness.
-*   *Action:* Manually change rainfall data or cut the energy budget in the Admin Panel.
-*   *Result:* Watch the **Traffic Congestion** and **Health Risk** predictions update in real-time.
-
-### 4. Government-Standard Reporting
-Generates professional PDF reports with "Official" styling, automatically stripping invalid characters and formatting data for high-level decision making.
-
-### 5. Multi-Layer Architecture
-*   **Layer 1 (Data Ingestion):** OpenWeather API & Mock Municipal Sensors.
-*   **Layer 2 (Base Models):** 6 ML Models (Python/Scikit-Learn).
-*   **Layer 3 (Generative AI):** Mistral 7B for textual recommendations.
-*   **Layer 4 (Frontend):** React Dashboard for visualization.
+### Key Features
+1.  **Cascading Risk Engine**: Models chain reactions (Weather → Traffic → Supply Chain).
+2.  **Crisis Response LLM**: Uses a localized **TinyLlama-1.1B** model to generate specific, actionable advisories (e.g., "Issue Mask Mandate").
+3.  **"What-If" Scenario Simulator**: Admin tool to simulate inputs (e.g., "What if rainfall drops by 50%?") and see real-time AI predictions.
+4.  **Public Feedback System**: Citizens can vote on directives ("Good/Bad Decision") directly from the public dashboard.
+5.  **Automated PDF Reporting**: Generates official government-styled directives with one click.
 
 ---
 
-## 🛠️ Complete Tech Stack
+## 🛠️ Tech Stack
 
-### Frontend & UI
-*   **Framework**: React 18 (Vite)
-*   **Language**: TypeScript
-*   **Styling**: Tailwind CSS, shadcn/ui
-*   **Icons**: Lucide React
-*   **Animations**: Framer Motion
-*   **Data Visualization**: Recharts
-
-### Backend & AI
-*   **Authentication**: Supabase Auth
-*   **Database**: Supabase (PostgreSQL, Row Level Security)
-*   **Core Logic**: Python (FastAPI) (for ML Layer)
-*   **ML Libraries**: Scikit-Learn, XGBoost, Pandas
-*   **LLM**: Mistral AI 7B (via API)
-
-### Quality Assurance
-*   **Testing**: Vitest
-*   **Linting**: ESLint
-*   **Validation**: Zod (Frontend), Pydantic (Backend)
+| Component | Technology |
+| :--- | :--- |
+| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Shadcn UI |
+| **Visualization** | Recharts, Framer Motion |
+| **Backend API** | Python (FastAPI) |
+| **AI/ML Engine** | TinyLlama-1.1B (LLM), Scikit-Learn (Predictive), Joblib |
+| **Database** | Supabase (PostgreSQL, Auth, Real-time) |
+| **Tools** | jsPDF (Reporting), Lucide React (Icons) |
 
 ---
 
-## ⚙️ Setup & Installation
+## 🚀 Setup Steps & How to Run Locally
 
-Follow these steps to deploy the project locally on your machine.
+Follow these commands to set up the project.
 
 ### 1. Clone the Repository
 ```bash
-git clone <https://github.com/Aryanbuha89/Hell_Boys>
+git clone https://github.com/Aryanbuha89/Hell_Boys.git
 cd Urban_Intel_AI
 ```
 
-### 2. Install Frontend Dependencies
+### 2. Frontend Setup
 ```bash
+# Install dependencies
 npm install
+
+# Run the development server
+npm run dev
 ```
+*Frontend runs at `http://localhost:8080`*
 
-### 3. Setup Python Backend (For ML Models)
-*Ensure you have Python 3.9+ installed.*
-
+### 3. Backend Setup (AI Engine)
+Open a new terminal.
 ```bash
 cd ml
+
+# Install Python dependencies (Requires Python 3.9+)
 pip install -r requirements.txt
+
+# Run the FastAPI server
 python api_server.py
 ```
-*The backend API will run on `http://localhost:8000`*
+*Backend runs at `http://localhost:8000`*
 
-### 4. Environment Configuration
+---
+
+## 🔐 Environment Variable Examples
+
 Create a `.env` file in the root directory.
 
-**`.env` Example**
 ```env
-# Supabase Configuration (Required for Auth & DB)
-VITE_SUPABASE_URL=https://iwcwsrqjhihkcoahnclm.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3Y3dzcnFqaGloa2NvYWhuY2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NzEyNzYsImV4cCI6MjA4NDI0NzI3Nn0.UaeUNg5Yw4Jwgj5-U-5xt4e72H6Gm96bBTruVvwG-yw
+# Supabase Configuration (Required for Auth & Feedback)
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-semcret-anon-key-here
 
 # Backend API (Connects React to Python ML Server)
 VITE_API_BASE_URL=http://localhost:8000
 
-# Optional: Mistral API Key (If running LLM features)
-MISTRAL_API_KEY=your-mistral-key
+# (Optional) LLM Configuration
+# LOCAL_LLM_MODEL_ID=TinyLlama/TinyLlama-1.1B-Chat-v1.0
 ```
-
-### 5. Database Setup (Supabase)
-Run the provided `supabase_schema.sql` in your Supabase project (SQL Editor) to create:
-*   `profiles`, `prediction_logs`, `reports`, `decisions` tables.
-*   Triggers and Row Level Security (RLS) policies.
-
-### 6. Run the Frontend
-```bash
-npm run dev
-```
-The application will launch at `http://localhost:8080`.
 
 ---
 
-## 🔐 Test Login Credentials
+## 👤 Test Login Credentials
 
-To test the **Admin Portal** features (Database logging, Reports):
+Use these credentials to access the **Admin Dashboard** features (Simulation, Reports, Decision Publishing).
 
-1.  **Sign Up**: You can sign up a new user directly via the Supabase Dashboard -> Authentication -> Users.
-2.  **Default Role**: The system automatically assigns the 'admin' role to new users via a database trigger.
-3.  **Demo Access**:
-    *   **Email**: `hack1throne@gmail.com`
-    *   **Password**: `Krushit@123`
+*   **Email**: `hack1throne@gmail.com`
+*   **Password**: `Krushit@123`
+
+*(Note: Users are automatically assigned the 'admin' role upon creation via database trigger)*
 
 ---
 
-## 🛡️ Security & Privacy
+## 🛡️ Security & Secrets Confirmation
 
-*   **No Secrets in Repo**: All API keys and secrets are managed via `.env` files and are excluded from version control via `.gitignore`.
-*   **RLS Policies**: Supabase Row Level Security is enabled to ensure only authorized Admins can publish directives.
+**✅ NO SECRETS IN REPO:**
+*   All sensitive API keys (Supabase keys, Model paths) are stored exclusively in `.env` files.
+*   The `.env` file is included in `.gitignore` to prevent accidental commits.
+*   Row Level Security (RLS) policies are enforced on the Supabase database to protect user data.
 
 ---
 
 ## 🐛 Basic Error Handling
 
-*   **API Failures**: If the Python backend is offline, the frontend falls back to a sophisticated "Simulation Mode" using local algorithms to ensure the demo never crashes.
-*   **Form Validation**: All inputs in the "What-If" simulator are validated (e.g., Rainfall cannot be negative).
-*   **Auth State**: Users are gracefully redirected to the public view if their session expires.
+*   **Backend Connection**: If the Python API (`api_server.py`) is offline, the dashbord enters **Simulation Mode**, using fallback algorithms to ensure the presentation flow is never interrupted.
+*   **Input Validation**: The "What-If" simulator prevents invalid numerical inputs (e.g., negative rainfall).
+*   **LLM Hallucinations**: The "Crisis Response" output is strictly regex-filtered to remove meta-commentary and ensure only valid advisories are displayed.
 
 ---
 
-## 🏆 Hackathon Judges Note
-This project was built to demonstrate **practical AI application** in governance. It moves beyond simple data viewing to provide *prescriptive* and *predictive* capabilities, utilizing a novel combination of **Classic ML (Random Forest)** for numerical accuracy and **GenAI (Mistral 7B)** for strategic communication.
-
-**Developed by [Hell Boys Team]**
+**Developed by Team Hell Boys**
