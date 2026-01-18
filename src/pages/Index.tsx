@@ -5,10 +5,11 @@ import MetricCard from '@/components/MetricCard';
 import DirectiveBanner from '@/components/DirectiveBanner';
 import DirectiveHistory from '@/components/DirectiveHistory';
 import CityOverviewChart from '@/components/CityOverviewChart';
+import FeedbackDialog from '@/components/FeedbackDialog';
 import { useCityContext } from '@/contexts/CityContext';
 
 const Index = () => {
-  const { data, activeDirective, directiveHistory } = useCityContext();
+  const { data, activeDirective, directiveHistory, decisionHistory } = useCityContext();
 
   const getStatusFromValue = (value: number, thresholds: { good: number; moderate: number; poor: number }) => {
     if (value >= thresholds.good) return 'good';
@@ -16,6 +17,9 @@ const Index = () => {
     if (value >= thresholds.poor) return 'poor';
     return 'critical';
   };
+
+  // Get latest decision ID if available
+  const currentDecisionId = decisionHistory.length > 0 ? decisionHistory[0].id : undefined;
 
   return (
     <div className="min-h-screen gradient-hero">
@@ -139,6 +143,10 @@ const Index = () => {
           </motion.h2>
 
           <DirectiveBanner directive={activeDirective} />
+
+          <div className="mt-4 flex justify-end">
+            <FeedbackDialog directiveId={currentDecisionId} />
+          </div>
         </section>
 
         {/* Footer */}
