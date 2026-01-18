@@ -243,7 +243,14 @@ const ReportGenerator = ({ llmOptions }: ReportGeneratorProps) => {
           pdf.setFont('helvetica', 'normal');
           pdf.text(`Status: ${dec.status} (Approved by ${dec.approvedBy})`, margin + 80, yPos);
 
-          yPos += 6;
+          if (dec.title) {
+            yPos += 5;
+            pdf.setFont('helvetica', 'italic');
+            pdf.setFontSize(9);
+            pdf.text(`Action: ${dec.title}`, margin + 5, yPos);
+          }
+
+          yPos += 8;
         });
       }
 
